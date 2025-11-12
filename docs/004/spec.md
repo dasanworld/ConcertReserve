@@ -157,7 +157,7 @@
 - **요청 본문**:
   ```json
   {
-    "phone_number": "010-1234-5678",
+    "phoneNumber": "010-1234-5678",
     "password": "user-input-password"
   }
   ```
@@ -166,8 +166,8 @@
   {
     "success": true,
     "data": {
-      "reservation_id": "uuid",
-      "redirect_url": "/reservations/{reservationId}"
+      "reservationId": "uuid",
+      "redirectUrl": "/reservations/{reservationId}"
     }
   }
   ```
@@ -191,27 +191,27 @@
     "data": {
       "reservation": {
         "id": "uuid",
-        "concert_id": "uuid",
-        "customer_name": "홍길동",
-        "phone_number": "010-1234-5678",
+        "concertId": "uuid",
+        "customerName": "홍길동",
+        "phoneNumber": "010-1234-5678",
         "status": "confirmed",
-        "created_at": "2025-11-13T10:30:00Z"
+        "createdAt": "2025-11-13T10:30:00Z"
       },
       "concert": {
         "id": "uuid",
         "title": "2025 콘서트",
-        "event_date": "2025-12-31T19:00:00Z",
+        "eventDate": "2025-12-31T19:00:00Z",
         "venue": "올림픽공원 체조경기장"
       },
       "seats": [
         {
-          "seat_id": "uuid",
+          "seatId": "uuid",
           "label": "A-01",
-          "tier_label": "스페셜",
+          "tierLabel": "스페셜",
           "price": 250000
         }
       ],
-      "total_amount": 250000
+      "totalAmount": 250000
     }
   }
   ```
@@ -225,8 +225,8 @@
     "success": true,
     "message": "예약이 정상적으로 취소되었습니다.",
     "data": {
-      "cancelled_at": "2025-11-13T11:00:00Z",
-      "released_seats": 1
+      "cancelledAt": "2025-11-13T11:00:00Z",
+      "releasedSeats": 1
     }
   }
   ```
@@ -255,15 +255,16 @@
 
 ### 조회 시 필요한 데이터
 - **Input**:
-  - `phone_number` (string, required): 휴대폰 번호 (형식: 010-1234-5678)
+  - `phoneNumber` (string, required): 휴대폰 번호 (형식: 010-1234-5678)
   - `password` (string, required): 예약 시 설정한 비밀번호
 
-- **Output**:
+- **Output** (데이터베이스 필드):
   - `reservations` 테이블: id, concert_id, customer_name, phone_number, status, created_at
   - `concerts` 테이블: title, event_date, venue
   - `reservation_seats` 테이블: reservation_id, seat_id
   - `seats` 테이블: label, seat_tier_id
   - `concert_seat_tiers` 테이블: label, price
+  - **참고**: API 응답 시 snake_case → camelCase 변환 필요
 
 ### 취소 시 변경되는 데이터
 - **reservations 테이블**:

@@ -11,6 +11,10 @@
 ## Trigger
 예매자가 콘서트 상세 페이지에서 "예약하기" 버튼을 클릭하여 좌석 선택 페이지(`/concerts/[concertId]/seats`)로 진입
 
+## 페이지 경로
+- **현재 페이지**: `/concerts/[concertId]/seats` (좌석 선택 페이지)
+- **다음 페이지**: `/book` (예약 정보 입력 페이지, 좌석 선점 성공 후 이동)
+
 ## Main Scenario
 
 ### 1. 좌석 선택 페이지 진입 및 초기 상태 로드
@@ -229,7 +233,9 @@
   error: {
     code: 'SEAT_ALREADY_HELD',
     message: '선택하신 좌석 중 일부가 방금 판매되었습니다.',
-    unavailableSeats: string[]  // 선점 불가능한 좌석 ID 목록
+    details: {
+      unavailableSeats: string[]  // 선점 불가능한 좌석 ID 목록
+    }
   }
 }
 ```
@@ -372,7 +378,7 @@ alt 모든 좌석 status = available
   FE --> User: 예약 정보 입력 페이지로 리다이렉트
 else 하나라도 status ≠ available
   BE -> DB: ROLLBACK
-  BE --> FE: 409 Conflict\n{unavailableSeats[]}
+  BE --> FE: 409 Conflict\n{details: {unavailableSeats[]}}
   FE --> User: "선택하신 좌석 중 일부가\n방금 판매되었습니다" 메시지
   FE -> BE: GET /api/concerts/:concertId/seats
   BE -> DB: SELECT seats (최신 상태)

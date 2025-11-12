@@ -18,6 +18,11 @@
 ### Trigger
 사용자가 예약 정보 입력 페이지에서 예약자 정보(이름, 휴대폰 번호, 비밀번호)를 입력하고 "예약 완료" 버튼을 클릭
 
+### 페이지 경로
+- **이전 페이지**: `/concerts/[concertId]/seats` (좌석 선택 페이지)
+- **현재 페이지**: `/book` (예약 정보 입력 페이지)
+- **다음 페이지**: `/reservations/complete?id={reservationId}` (예약 완료 확인 페이지)
+
 ---
 
 ## Main Scenario
@@ -90,7 +95,7 @@
 - **발생 조건**: 사용자가 5분 선점 시간 내에 예약을 완료하지 못한 경우
 - **처리**:
   - 7단계 선점 유효성 재검증에서 실패
-  - 응답: `400 Bad Request`, 에러 코드 `SEAT_HOLD_EXPIRED`
+  - 응답: `409 Conflict`, 에러 코드 `SEAT_HOLD_EXPIRED`
   - FE: "좌석 선점 시간이 만료되었습니다. 좌석 선택 단계로 다시 진행해주세요." 메시지 표시 후 좌석 선택 페이지로 리다이렉트
 - **데이터 상태**: 좌석은 스케줄러에 의해 `available` 상태로 이미 변경되었거나 곧 변경될 예정
 
@@ -98,7 +103,7 @@
 - **발생 조건**: 선점된 좌석이 서버 오류 등으로 이미 `available` 또는 `reserved` 상태로 변경된 경우
 - **처리**:
   - 7단계 선점 유효성 재검증에서 실패
-  - 응답: `400 Bad Request`, 에러 코드 `SEAT_NOT_HELD`
+  - 응답: `409 Conflict`, 에러 코드 `SEAT_NOT_HELD`
   - FE: "선택하신 좌석이 유효하지 않습니다. 좌석을 다시 선택해주세요." 메시지 표시
 - **데이터 상태**: 트랜잭션 실행 전 단계이므로 데이터 변경 없음
 
@@ -207,7 +212,7 @@ Content-Type: application/json
 ### Request Schema (Zod)
 ```typescript
 {
-  seatIds: z.array(z.string().uuid()).min(1).max(10),
+  seatIds: z.array(z.string().uuid()).min(1).max(4),
   customerName: z.string().min(2).max(50).trim(),
   phoneNumber: z.string().regex(/^010-\d{4}-\d{4}$/),
   password: z.string().min(8).max(20)
@@ -263,7 +268,7 @@ Content-Type: application/json
 }
 ```
 
-#### 400 Bad Request - SEAT_HOLD_EXPIRED
+#### 409 Conflict - SEAT_HOLD_EXPIRED
 ```json
 {
   "success": false,
@@ -277,7 +282,7 @@ Content-Type: application/json
 }
 ```
 
-#### 400 Bad Request - SEAT_NOT_HELD
+#### 409 Conflict - SEAT_NOT_HELD
 ```json
 {
   "success": false,
@@ -364,7 +369,7 @@ else 유효성 검사 성공
   BE -> BE: 선점 유효성 재검증\n(status, hold_expires_at)
 
   alt 선점 시간 만료 또는 상태 불일치
-    BE --> FE: 400 Bad Request\n{code: SEAT_HOLD_EXPIRED}
+    BE --> FE: 409 Conflict\n{code: SEAT_HOLD_EXPIRED}
     FE --> User: "선점 시간 만료" 메시지\n좌석 선택 페이지로 리다이렉트
   else 선점 유효
     BE -> BE: 비밀번호 해싱 (bcrypt)
