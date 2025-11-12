@@ -1,7 +1,26 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ============================================
+# 사용자 추가
+# ============================================
+.quen/
+.claude/
+/docs/database.codex.md.org
 
-# dependencies
-/node_modules
+# ============================================
+# Ruler Generated Files
+# ============================================
+/.codex/config.toml
+/.codex/config.toml.bak
+/AGENTS.md
+/AGENTS.md.bak
+/CLAUDE.md
+/CLAUDE.md.bak
+.ruler/
+
+
+# ============================================
+# Dependencies
+# ============================================
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,72 +29,127 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# ============================================
+# Next.js / Build Outputs
+# ============================================
 /.next/
 /out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# EasyNext
+next-env.d.ts
+*.tsbuildinfo
+.turbo/
 .easynext
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# ============================================
+# Production Builds
+# ============================================
+/build
+/dist
 
-# === Additional patterns ===
+# ============================================
+# Environment Variables
+# ============================================
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Supabase (local development)
+# ============================================
+# Testing
+# ============================================
+/coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+e2e/test-accounts.json
+e2e/token-store.json
+e2e/integration-test-data.json
+tests/
+
+# ============================================
+# Supabase (Local Development)
+# ============================================
 supabase/.temp/
 supabase/.branches/
 .supabase/
 
+# ============================================
+# Vercel
+# ============================================
+.vercel
+
+# ============================================
+# Debug Logs
+# ============================================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# ============================================
 # Caches
+# ============================================
 .eslintcache
 .stylelintcache
+.cache/
 
-# OS / Editor
-Thumbs.db
-.idea/
+# ============================================
+# IDE / Editor
+# ============================================
 .vscode/
+.idea/
 *.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
 
-# Additional build outputs
-dist/
-.turbo/
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.pem
 
-# Additional testing
-.nyc_output/
-
-# Misc
-*.pid
-*.seed
-*.tgz
-
+# ============================================
 # Ruler Generated Files
+# ============================================
 /.codex/config.toml
 /.codex/config.toml.bak
 /AGENTS.md
 /AGENTS.md.bak
 /CLAUDE.md
 /CLAUDE.md.bak
+.ruler/
+
+# ============================================
+# AI Assistant Directories
+# ============================================
+.claude/
+.prompt/
+prompt/
+docs/**/usecase-checker.md
+USECASE_CHECKER_SUMMARY.md
+
+# ============================================
+# Documentation (Optional - uncomment if needed)
+# ============================================
+# /Docs/prd.md
+# /Docs/Userflow.md
+
+# ============================================
+# Misc
+# ============================================
+*.pid
+*.seed
+*.tgz
