@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, Music, Search } from "lucide-react";
+import { LogOut, Music, Search, Settings } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { useCurrentUser } from "@/features/auth/hooks/useCurrentUser";
 
@@ -36,6 +36,16 @@ export function GlobalNav() {
         >
           <Search className="h-4 w-4" />
           예약조회
+        </Link>
+
+        {/* 관리 대시보드 링크 */}
+        <Link
+          href="/dev/admin/cleanup"
+          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+          title="선점 정리 관리"
+        >
+          <Settings className="h-4 w-4" />
+          <span className="text-xs">관리</span>
         </Link>
 
         {/* 로그인 정보 */}

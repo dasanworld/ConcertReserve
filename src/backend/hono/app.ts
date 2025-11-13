@@ -6,6 +6,7 @@ import { registerExampleRoutes } from '@/features/example/backend/route';
 import { registerConcertRoutes } from '@/features/concert/backend/route';
 import { registerSeatSelectionRoutes } from '@/features/seat-selection/backend/route';
 import { registerReservationRoutes } from '@/features/reservation/backend/route';
+import { registerJobRoutes } from '@/backend/jobs/route';
 import type { AppEnv } from '@/backend/hono/context';
 
 let singletonApp: Hono<AppEnv> | null = null;
@@ -25,6 +26,7 @@ export const createHonoApp = () => {
   registerConcertRoutes(app);
   registerSeatSelectionRoutes(app);
   registerReservationRoutes(app);
+  registerJobRoutes(app);
 
   singletonApp = app;
 
