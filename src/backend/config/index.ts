@@ -1,10 +1,4 @@
-import { z } from 'zod';
 import type { AppConfig } from '@/backend/hono/context';
-
-const envSchema = z.object({
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-});
 
 let cachedConfig: AppConfig | null = null;
 
@@ -13,24 +7,24 @@ export const getAppConfig = (): AppConfig => {
     return cachedConfig;
   }
 
+  // Fallback to NEXT_PUBLIC_SUPABASE_URL if SUPABASE_URL is not set
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  const parsed = envSchema.safeParse({
-    SUPABASE_URL: supabaseUrl,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  });
+  if (!supabaseUrl) {
+    throw new Error(
+      'Invalid backend configuration: SUPABASE_URL: Required (set SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL)'
+    );
+  }
 
-  if (!parsed.success) {
-    const messages = parsed.error.issues
-      .map((issue) => `${issue.path.join('.') || 'config'}: ${issue.message}`)
-      .join('; ');
-    throw new Error(`Invalid backend configuration: ${messages}`);
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    throw new Error('Invalid backend configuration: SUPABASE_SERVICE_ROLE_KEY: Required');
   }
 
   cachedConfig = {
     supabase: {
-      url: parsed.data.SUPABASE_URL,
-      serviceRoleKey: parsed.data.SUPABASE_SERVICE_ROLE_KEY,
+      url: supabaseUrl,
+      serviceRoleKey: serviceRoleKey,
     },
   } satisfies AppConfig;
 
