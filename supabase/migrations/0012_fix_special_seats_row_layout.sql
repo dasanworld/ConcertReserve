@@ -1,21 +1,89 @@
--- Fix BLACKPINK and BTS Special tier seat rows
--- 48 seats should be arranged as 3 rows × 16 seats per row
--- Originally 4 rows × 12 seats, consolidate into 3 rows with proper numbering
--- A: seat 1-16, B: seat 17-32, C: seat 33-48
+-- Fix ALL seat tiers for BLACKPINK and BTS concerts
+-- Recreate all seats with proper numbering (no duplicates, correct row/seat numbers)
 
--- First, delete existing seats and recreate them properly
--- BLACKPINK Special tier - Recreate seats correctly
+-- ============================================
+-- BLACKPINK Concert (b80ac6ea-9221-4a76-81e0-b0f5e316f52f)
+-- ============================================
+
+-- Delete all BLACKPINK seats
 DELETE FROM public.seats
-WHERE concert_id = 'b80ac6ea-9221-4a76-81e0-b0f5e316f52f'
-  AND seat_tier_id IN (
-    SELECT id FROM concert_seat_tiers 
-    WHERE concert_id = 'b80ac6ea-9221-4a76-81e0-b0f5e316f52f' 
-    AND label = 'Special'
-  );
+WHERE concert_id = 'b80ac6ea-9221-4a76-81e0-b0f5e316f52f';
 
--- Recreate 48 seats as 3 rows × 16 seats
+-- Regular tier: 80 seats (5 rows, 16 seats per row)
 INSERT INTO public.seats (
-  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number, 
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
+  status, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(),
+  'b80ac6ea-9221-4a76-81e0-b0f5e316f52f',
+  (SELECT id FROM concert_seat_tiers WHERE concert_id = 'b80ac6ea-9221-4a76-81e0-b0f5e316f52f' AND label = 'Regular'),
+  'RG-' || CHR(65 + (row_num - 1)) || LPAD((seat_num::text), 2, '0'),
+  'RG',
+  row_num,
+  CHR(65 + (row_num - 1)),
+  seat_num,
+  'available',
+  NOW(),
+  NOW()
+FROM (
+  SELECT generate_series(1, 5) as row_num
+) rows,
+(
+  SELECT generate_series(1, 16) as seat_num
+) seats;
+
+-- Advanced tier: 128 seats (8 rows, 16 seats per row)
+INSERT INTO public.seats (
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
+  status, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(),
+  'b80ac6ea-9221-4a76-81e0-b0f5e316f52f',
+  (SELECT id FROM concert_seat_tiers WHERE concert_id = 'b80ac6ea-9221-4a76-81e0-b0f5e316f52f' AND label = 'Advanced'),
+  'AD-' || CHR(65 + (row_num - 1)) || LPAD((seat_num::text), 2, '0'),
+  'AD',
+  row_num,
+  CHR(65 + (row_num - 1)),
+  seat_num,
+  'available',
+  NOW(),
+  NOW()
+FROM (
+  SELECT generate_series(1, 8) as row_num
+) rows,
+(
+  SELECT generate_series(1, 16) as seat_num
+) seats;
+
+-- Premium tier: 64 seats (4 rows, 16 seats per row)
+INSERT INTO public.seats (
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
+  status, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(),
+  'b80ac6ea-9221-4a76-81e0-b0f5e316f52f',
+  (SELECT id FROM concert_seat_tiers WHERE concert_id = 'b80ac6ea-9221-4a76-81e0-b0f5e316f52f' AND label = 'Premium'),
+  'PR-' || CHR(65 + (row_num - 1)) || LPAD((seat_num::text), 2, '0'),
+  'PR',
+  row_num,
+  CHR(65 + (row_num - 1)),
+  seat_num,
+  'available',
+  NOW(),
+  NOW()
+FROM (
+  SELECT generate_series(1, 4) as row_num
+) rows,
+(
+  SELECT generate_series(1, 16) as seat_num
+) seats;
+
+-- Special tier: 48 seats (3 rows, 16 seats per row)
+INSERT INTO public.seats (
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
   status, created_at, updated_at
 )
 SELECT
@@ -37,16 +105,87 @@ FROM (
   SELECT generate_series(1, 16) as seat_num
 ) seats;
 
--- BTS Special tier - Recreate seats correctly
-DELETE FROM public.seats
-WHERE concert_id = '2b4820e5-be09-4223-b41c-6da9c90b758a'
-  AND seat_tier_id IN (
-    SELECT id FROM concert_seat_tiers 
-    WHERE concert_id = '2b4820e5-be09-4223-b41c-6da9c90b758a' 
-    AND label = 'Special'
-  );
+-- ============================================
+-- BTS Concert (2b4820e5-be09-4223-b41c-6da9c90b758a)
+-- ============================================
 
--- Recreate 48 seats as 3 rows × 16 seats
+-- Delete all BTS seats
+DELETE FROM public.seats
+WHERE concert_id = '2b4820e5-be09-4223-b41c-6da9c90b758a';
+
+-- Regular tier: 80 seats (5 rows, 16 seats per row)
+INSERT INTO public.seats (
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
+  status, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(),
+  '2b4820e5-be09-4223-b41c-6da9c90b758a',
+  (SELECT id FROM concert_seat_tiers WHERE concert_id = '2b4820e5-be09-4223-b41c-6da9c90b758a' AND label = 'Regular'),
+  'RG-' || CHR(65 + (row_num - 1)) || LPAD((seat_num::text), 2, '0'),
+  'RG',
+  row_num,
+  CHR(65 + (row_num - 1)),
+  seat_num,
+  'available',
+  NOW(),
+  NOW()
+FROM (
+  SELECT generate_series(1, 5) as row_num
+) rows,
+(
+  SELECT generate_series(1, 16) as seat_num
+) seats;
+
+-- Advanced tier: 128 seats (8 rows, 16 seats per row)
+INSERT INTO public.seats (
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
+  status, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(),
+  '2b4820e5-be09-4223-b41c-6da9c90b758a',
+  (SELECT id FROM concert_seat_tiers WHERE concert_id = '2b4820e5-be09-4223-b41c-6da9c90b758a' AND label = 'Advanced'),
+  'AD-' || CHR(65 + (row_num - 1)) || LPAD((seat_num::text), 2, '0'),
+  'AD',
+  row_num,
+  CHR(65 + (row_num - 1)),
+  seat_num,
+  'available',
+  NOW(),
+  NOW()
+FROM (
+  SELECT generate_series(1, 8) as row_num
+) rows,
+(
+  SELECT generate_series(1, 16) as seat_num
+) seats;
+
+-- Premium tier: 64 seats (4 rows, 16 seats per row)
+INSERT INTO public.seats (
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
+  status, created_at, updated_at
+)
+SELECT
+  gen_random_uuid(),
+  '2b4820e5-be09-4223-b41c-6da9c90b758a',
+  (SELECT id FROM concert_seat_tiers WHERE concert_id = '2b4820e5-be09-4223-b41c-6da9c90b758a' AND label = 'Premium'),
+  'PR-' || CHR(65 + (row_num - 1)) || LPAD((seat_num::text), 2, '0'),
+  'PR',
+  row_num,
+  CHR(65 + (row_num - 1)),
+  seat_num,
+  'available',
+  NOW(),
+  NOW()
+FROM (
+  SELECT generate_series(1, 4) as row_num
+) rows,
+(
+  SELECT generate_series(1, 16) as seat_num
+) seats;
+
+-- Special tier: 48 seats (3 rows, 16 seats per row)
 INSERT INTO public.seats (
   id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
   status, created_at, updated_at
