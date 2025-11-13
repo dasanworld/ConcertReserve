@@ -110,7 +110,7 @@ type SeatSelectionAction =
 ```typescript
 interface SeatSelectionContextValue {
   // 상태 (State)
-  selectedSeatIds: Set<string>;
+  selectedSeatIds: readonly string[]; // 외부 노출은 불변 배열로 제공 (내부는 Set 유지)
   selectionError: string | null;
   isHolding: boolean;
   holdError: { message: string; unavailableSeats?: string[] } | null;
@@ -118,14 +118,23 @@ interface SeatSelectionContextValue {
   // 파생 상태 (Derived State)
   selectedSeats: Seat[]; // 선택된 좌석 객체 배열
   totalAmount: number;   // 총 선택 금액
+  selectionLimit: number; // 최대 선택 가능 좌석 수 (예: 4)
+  remainingSelectable: number; // 남은 선택 가능 좌석 수
   canSubmitHold: boolean; // '예약하기' 버튼 활성화 조건
 
   // 액션 함수 (Action Functions)
   selectSeat: (seatId: string) => void;
   deselectSeat: (seatId: string) => void;
+  clearSelection: () => void;
   holdSeats: () => Promise<void>; // 비동기 액션
 }
 ```
+
+#### 구현 규칙
+- Provider 및 소비 컴포넌트는 모두 `"use client"` 지시문을 사용합니다.
+- HTTP 요청은 반드시 `@/lib/remote/api-client`를 경유합니다.
+- 클라이언트 컴포넌트에서는 `async/await`를 지양하고, React Query mutation 또는 `Promise.then().catch()` 체인을 사용합니다.
+- 외부에는 `readonly string[]`를 노출하고, 내부에서는 `Set<string>`으로 효율적 포함/제거 연산을 수행합니다.
 
 ---
 
@@ -197,8 +206,15 @@ interface ReservationProcessContextValue {
   // 액션 함수 (Action Functions)
   updateFormField: (field: keyof ReservationProcessState['form'], value: string) => void;
   submitReservation: () => Promise<void>;
+  expireHoldAndCleanup: () => void; // 만료 시 선택/폼/타이머 정리 및 알림 트리거
 }
 ```
+
+#### 구현 규칙
+- 만료 타이머는 Provider 내부 `useEffect`에서 `setInterval`로 tick을 관리하고, 언마운트 시 정리합니다.
+- 시간 비교는 ISO 문자열을 `Date.parse`로 처리합니다.
+- HTTP 요청은 `@/lib/remote/api-client`를 경유하며, 클라이언트에서는 `async/await` 대신 Promise 체인을 사용합니다.
+- `datetime-local` 값은 `${value}:00Z` 형태로 ISO 문자열을 구성합니다.
 
 ---
 
@@ -276,7 +292,21 @@ interface ReservationLookupContextValue {
 }
 ```
 
+#### 구현 규칙
+- 조회/취소 요청은 `@/lib/remote/api-client`를 통해 수행합니다.
+- `canCancel`는 예약 상태 및 시간 제약(정책)에 기반하여 계산합니다.
+- 클라이언트에서는 `async/await` 대신 Promise 체인을 사용하거나, React Query mutation을 사용합니다.
+- 타입은 `src/features/*/lib/dto`에서 재노출된 DTO를 참조합니다.
+
 ---
+
+## 4. 공통 구현 주의사항
+
+- 모든 Provider와 해당 하위 컴포넌트는 `"use client"`를 선언합니다.
+- 모든 HTTP 요청은 `@/lib/remote/api-client` 경유 및 인터셉터(예: 인증 토큰) 규칙을 따릅니다.
+- 클라이언트 컴포넌트에서는 `async/await` 사용을 피하고, React Query mutations 또는 `Promise.then().catch()`를 사용합니다.
+- Context에서는 가능한 한 불변/원시 형태(예: `readonly string[]`, number, boolean)로 값을 노출합니다.
+- 도메인 타입(`Seat`, `ReservationDetail`, 등)은 각 기능의 `src/features/[feature]/lib/dto.ts`에서 가져옵니다.
 
 ## 3. 결론
 
