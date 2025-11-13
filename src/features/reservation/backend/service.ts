@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import {
   failure,
   success,
@@ -20,6 +21,17 @@ import {
   type ReservationServiceError,
 } from '@/features/reservation/backend/error';
 import { format } from 'date-fns';
+
+// 예약 취소 응답 스키마
+const CancelReservationResponseSchema = z.object({
+  reservationId: z.string().uuid(),
+  reservationNumber: z.string(),
+  message: z.string(),
+  cancelledAt: z.string(),
+  releasedSeats: z.number(),
+});
+
+type CancelReservationResponse = z.infer<typeof CancelReservationResponseSchema>;
 
 const RESERVATIONS_TABLE = 'reservations';
 const RESERVATION_SEATS_TABLE = 'reservation_seats';
@@ -486,6 +498,145 @@ export const lookupReservation = async (
       500,
       reservationErrorCodes.RESERVATION_DB_ERROR,
       '예약 조회 응답 검증에 실패했습니다.',
+      parsed.error.format(),
+    );
+  }
+
+  return success(parsed.data);
+};
+
+// 예약 취소 함수
+export const cancelReservation = async (
+  client: SupabaseClient,
+  reservationId: string,
+): Promise<
+  HandlerResult<CancelReservationResponse, ReservationServiceError, unknown>
+> => {
+  // 1. 예약 존재 여부 확인
+  const { data: reservationData, error: reservationError } = await client
+    .from(RESERVATIONS_TABLE)
+    .select('id, status, created_at, phone_number')
+    .eq('id', reservationId)
+    .single();
+
+  if (reservationError) {
+    if (reservationError.code === 'PGRST116') {
+      return failure(404, reservationErrorCodes.RESERVATION_NOT_FOUND, '예약 정보를 찾을 수 없습니다.');
+    }
+    return failure(500, reservationErrorCodes.RESERVATION_DB_ERROR, reservationError.message);
+  }
+
+  if (!reservationData) {
+    return failure(404, reservationErrorCodes.RESERVATION_NOT_FOUND, '예약 정보를 찾을 수 없습니다.');
+  }
+
+  // 2. 취소 가능 여부 확인
+  if (reservationData.status === 'cancelled') {
+    return failure(
+      400,
+      reservationErrorCodes.ALREADY_CANCELLED,
+      '이미 취소된 예약입니다.',
+    );
+  }
+
+  if (reservationData.status !== 'confirmed') {
+    return failure(
+      400,
+      reservationErrorCodes.CANCELLATION_FAILED,
+      '취소할 수 없는 상태의 예약입니다.',
+    );
+  }
+
+  // 3. 예약된 좌석 ID 조회
+  const { data: reservationSeats, error: reservationSeatsError } = await client
+    .from(RESERVATION_SEATS_TABLE)
+    .select('seat_id')
+    .eq('reservation_id', reservationId);
+
+  if (reservationSeatsError) {
+    return failure(500, reservationErrorCodes.RESERVATION_DB_ERROR, reservationSeatsError.message);
+  }
+
+  if (!reservationSeats || reservationSeats.length === 0) {
+    return failure(
+      500,
+      reservationErrorCodes.RESERVATION_DB_ERROR,
+      '예약된 좌석 정보를 찾을 수 없습니다.',
+    );
+  }
+
+  const seatIds = reservationSeats.map((rs) => rs.seat_id);
+  const releasedSeatsCount = seatIds.length;
+
+  // 4. 예약 상태 업데이트 (confirmed -> cancelled)
+  const now = new Date().toISOString();
+  const { error: updateReservationError } = await client
+    .from(RESERVATIONS_TABLE)
+    .update({
+      status: 'cancelled',
+      cancelled_at: now,
+    })
+    .eq('id', reservationId);
+
+  if (updateReservationError) {
+    return failure(
+      500,
+      reservationErrorCodes.CANCELLATION_FAILED,
+      '예약 취소 중 오류가 발생했습니다.',
+      updateReservationError,
+    );
+  }
+
+  // 5. 좌석 상태 해제 (reserved -> available)
+  const { error: updateSeatsError } = await client
+    .from(SEATS_TABLE)
+    .update({
+      status: 'available',
+      hold_expires_at: null,
+    })
+    .in('id', seatIds);
+
+  if (updateSeatsError) {
+    // 롤백 시도 (예약 상태를 다시 confirmed로)
+    await client
+      .from(RESERVATIONS_TABLE)
+      .update({
+        status: 'confirmed',
+        cancelled_at: null,
+      })
+      .eq('id', reservationId);
+
+    return failure(
+      500,
+      reservationErrorCodes.CANCELLATION_FAILED,
+      '예약 취소 중 오류가 발생했습니다.',
+      updateSeatsError,
+    );
+  }
+
+  // 6. 예약 번호 생성
+  const reservationNumber = generateReservationNumber(
+    reservationData.created_at,
+    reservationId,
+  );
+
+  // 7. 응답 데이터 구성
+  const response = {
+    reservationId,
+    reservationNumber,
+    message: '예약이 정상적으로 취소되었습니다.',
+    cancelledAt: now,
+    releasedSeats: releasedSeatsCount,
+  };
+
+  // 8. 스키마 검증
+  const parsed = CancelReservationResponseSchema.safeParse(response);
+
+  if (!parsed.success) {
+    return failure(
+      500,
+      reservationErrorCodes.RESERVATION_DB_ERROR,
+      '예약 취소 응답 검증에 실패했습니다.',
       parsed.error.format(),
     );
   }

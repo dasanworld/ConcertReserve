@@ -8,7 +8,7 @@ import {
   getSupabase,
   type AppEnv,
 } from '@/backend/hono/context';
-import { getReservationDetail, createReservation, lookupReservation } from './service';
+import { getReservationDetail, createReservation, lookupReservation, cancelReservation } from './service';
 import {
   reservationErrorCodes,
   type ReservationServiceError,
@@ -153,5 +153,47 @@ export const registerReservationRoutes = (app: Hono<AppEnv>) => {
       },
       201
     );
+  });
+
+  // DELETE /api/reservations/:id - 예약 취소
+  app.delete('/api/reservations/:id', async (c) => {
+    const supabase = getSupabase(c);
+    const logger = getLogger(c);
+    const { id } = c.req.param();
+
+    // UUID 형식 검증
+    const uuidValidation = uuidSchema.safeParse(id);
+    if (!uuidValidation.success) {
+      logger.error('Invalid reservation ID format', { id });
+      return c.json(
+        {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '잘못된 예약 ID 형식입니다.',
+            details: uuidValidation.error.format(),
+          },
+        },
+        400
+      );
+    }
+
+    const result = await cancelReservation(supabase, id);
+
+    if (!result.ok) {
+      const errorResult = result as ErrorResult<ReservationServiceError, unknown>;
+
+      if (errorResult.error.code === reservationErrorCodes.RESERVATION_NOT_FOUND) {
+        logger.error('Reservation not found for cancellation', { id });
+      } else if (errorResult.error.code === reservationErrorCodes.ALREADY_CANCELLED) {
+        logger.warn('Reservation already cancelled', { id });
+      } else if (errorResult.error.code === reservationErrorCodes.CANCELLATION_FAILED) {
+        logger.error('Cancellation failed', errorResult.error.message);
+      }
+
+      return respond(c, result);
+    }
+
+    return respond(c, result);
   });
 };
