@@ -76,7 +76,7 @@ export const ReservationForm = ({ form }: ReservationFormProps) => {
                 <Input
                   {...field}
                   type="password"
-                  placeholder="8~20자 비밀번호"
+                  placeholder="4~20자 비밀번호"
                   autoComplete="new-password"
                 />
               </FormControl>

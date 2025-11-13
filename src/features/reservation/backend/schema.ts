@@ -9,6 +9,15 @@ import {
   CUSTOMER_NAME_MAX_LENGTH,
 } from '@/features/reservation/constants';
 
+// 휴대폰 번호를 010-XXXX-XXXX 형식으로 정규화
+const normalizePhoneNumber = (phone: string): string => {
+  const digitsOnly = phone.replace(/\D/g, '');
+  if (digitsOnly.length === 11) {
+    return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 7)}-${digitsOnly.slice(7)}`;
+  }
+  return phone;
+};
+
 // Seat Detail Schema (좌석 상세 정보)
 export const SeatDetailSchema = z.object({
   seatId: z.string().uuid(),
@@ -32,7 +41,8 @@ export const CreateReservationRequestSchema = z.object({
     .max(CUSTOMER_NAME_MAX_LENGTH, `이름은 최대 ${CUSTOMER_NAME_MAX_LENGTH}자까지 입력할 수 있습니다.`),
   phoneNumber: z
     .string()
-    .regex(PHONE_NUMBER_REGEX, '휴대폰 번호 형식이 올바르지 않습니다. (010-XXXX-XXXX)'),
+    .transform(normalizePhoneNumber)
+    .regex(PHONE_NUMBER_REGEX, '휴대폰 번호 형식이 올바르지 않습니다. (010-XXXX-XXXX 또는 01000000000)'),
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `비밀번호는 최소 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`)
@@ -80,7 +90,8 @@ export type ReservationDetailResponse = z.infer<typeof ReservationDetailResponse
 export const ReservationLookupRequestSchema = z.object({
   phoneNumber: z
     .string()
-    .regex(PHONE_NUMBER_REGEX, '휴대폰 번호 형식이 올바르지 않습니다. (010-XXXX-XXXX)'),
+    .transform(normalizePhoneNumber)
+    .regex(PHONE_NUMBER_REGEX, '휴대폰 번호 형식이 올바르지 않습니다. (010-XXXX-XXXX 또는 01000000000)'),
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `비밀번호는 최소 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`)

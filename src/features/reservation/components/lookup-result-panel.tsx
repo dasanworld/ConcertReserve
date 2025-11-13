@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { ReservationInfo } from '@/features/reservation/components/reservation-info';
 import { CancelConfirmDialog } from '@/features/reservation/components/cancel-confirm-dialog';
+import { CancelResultDialog } from '@/features/reservation/components/cancel-result-dialog';
 import { useReservationLookupContext } from '@/features/reservation/lookup/reservation-lookup-provider';
 
 export const LookupResultPanel = () => {
@@ -12,9 +13,13 @@ export const LookupResultPanel = () => {
     isCancelModalOpen,
     isCancelling,
     cancelError,
+    isResultDialogOpen,
+    resultDialogSuccess,
+    resultDialogMessage,
     showCancelModal,
     hideCancelModal,
     cancelReservation,
+    closeResultDialog,
   } = useReservationLookupContext();
 
   if (!reservationDetail) {
@@ -44,6 +49,13 @@ export const LookupResultPanel = () => {
         onConfirm={cancelReservation}
         onCancel={hideCancelModal}
         isLoading={isCancelling}
+      />
+
+      <CancelResultDialog
+        isOpen={isResultDialogOpen}
+        isSuccess={resultDialogSuccess}
+        message={resultDialogMessage}
+        onClose={closeResultDialog}
       />
     </div>
   );

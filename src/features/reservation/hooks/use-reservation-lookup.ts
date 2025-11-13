@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import { z } from 'zod';
 import { apiClient } from '@/lib/remote/api-client';
-import { useToast } from '@/hooks/use-toast';
 import {
   ReservationDetailResponseSchema,
   ReservationLookupResponseSchema,
@@ -26,6 +25,9 @@ interface ReservationLookupState {
   isCancelModalOpen: boolean;
   isCancelling: boolean;
   cancelError: string | null;
+  isResultDialogOpen: boolean;
+  resultDialogSuccess: boolean;
+  resultDialogMessage: string;
 }
 
 type ReservationLookupAction =
@@ -41,7 +43,9 @@ type ReservationLookupAction =
   | { type: 'CLOSE_CANCEL_MODAL' }
   | { type: 'CANCEL_START' }
   | { type: 'CANCEL_SUCCESS' }
-  | { type: 'CANCEL_FAILURE'; payload: string };
+  | { type: 'CANCEL_FAILURE'; payload: string }
+  | { type: 'SHOW_RESULT_DIALOG'; payload: { success: boolean; message: string } }
+  | { type: 'CLOSE_RESULT_DIALOG' };
 
 export interface ReservationLookupContextValue {
   lookupForm: ReservationLookupState['lookupForm'];
@@ -51,6 +55,9 @@ export interface ReservationLookupContextValue {
   isCancelModalOpen: boolean;
   isCancelling: boolean;
   cancelError: string | null;
+  isResultDialogOpen: boolean;
+  resultDialogSuccess: boolean;
+  resultDialogMessage: string;
   cancellationPolicy: CancellationPolicy;
   canCancel: boolean;
   updateLookupFormField: (
@@ -61,6 +68,7 @@ export interface ReservationLookupContextValue {
   showCancelModal: () => void;
   hideCancelModal: () => void;
   cancelReservation: () => Promise<void>;
+  closeResultDialog: () => void;
   reset: () => void;
 }
 
@@ -75,6 +83,9 @@ export const initialLookupState: ReservationLookupState = {
   isCancelModalOpen: false,
   isCancelling: false,
   cancelError: null,
+  isResultDialogOpen: false,
+  resultDialogSuccess: false,
+  resultDialogMessage: '',
 };
 
 const DEFAULT_CANCELLATION_POLICY: CancellationPolicy = {
@@ -144,6 +155,15 @@ export const reservationLookupReducer = (
       };
     case 'CANCEL_FAILURE':
       return { ...state, isCancelling: false, cancelError: action.payload };
+    case 'SHOW_RESULT_DIALOG':
+      return {
+        ...state,
+        isResultDialogOpen: true,
+        resultDialogSuccess: action.payload.success,
+        resultDialogMessage: action.payload.message,
+      };
+    case 'CLOSE_RESULT_DIALOG':
+      return { ...state, isResultDialogOpen: false };
     default:
       return state;
   }
@@ -165,7 +185,6 @@ export function useReservationLookup(): ReservationLookupContextValue {
     reservationLookupReducer,
     initialLookupState,
   );
-  const { toast } = useToast();
 
   // ========== Action Functions ==========
   const updateLookupFormField = useCallback(
@@ -204,10 +223,6 @@ export function useReservationLookup(): ReservationLookupContextValue {
       );
 
       dispatch({ type: 'LOOKUP_SUCCESS', payload: parsedDetail });
-      toast({
-        title: '예약을 찾았습니다',
-        description: '예약 상세 정보를 확인하세요.',
-      });
     } catch (error) {
       const message =
         (error as any)?.response?.data?.error?.message ??
@@ -215,7 +230,7 @@ export function useReservationLookup(): ReservationLookupContextValue {
         '예약 조회 중 오류가 발생했습니다.';
       dispatch({ type: 'LOOKUP_FAILURE', payload: message });
     }
-  }, [state.lookupForm, toast]);
+  }, [state.lookupForm]);
 
   const cancelReservation = useCallback(async () => {
     if (!state.reservationDetail) {
@@ -229,9 +244,12 @@ export function useReservationLookup(): ReservationLookupContextValue {
       );
       CancelReservationResponseSchema.parse(response.data);
       dispatch({ type: 'CANCEL_SUCCESS' });
-      toast({
-        title: '예약이 취소되었습니다',
-        description: '선택된 좌석이 해제되었습니다.',
+      dispatch({
+        type: 'SHOW_RESULT_DIALOG',
+        payload: {
+          success: true,
+          message: '예약이 취소되었습니다. 선택된 좌석이 해제되었습니다.',
+        },
       });
     } catch (error) {
       const message =
@@ -239,13 +257,15 @@ export function useReservationLookup(): ReservationLookupContextValue {
         (error as Error)?.message ??
         '예약 취소에 실패했습니다.';
       dispatch({ type: 'CANCEL_FAILURE', payload: message });
-      toast({
-        title: '취소 실패',
-        description: message,
-        variant: 'destructive',
+      dispatch({
+        type: 'SHOW_RESULT_DIALOG',
+        payload: {
+          success: false,
+          message: message,
+        },
       });
     }
-  }, [state.reservationDetail, toast]);
+  }, [state.reservationDetail]);
 
   const showCancelModal = useCallback(() => {
     dispatch({ type: 'OPEN_CANCEL_MODAL' });
@@ -253,6 +273,10 @@ export function useReservationLookup(): ReservationLookupContextValue {
 
   const hideCancelModal = useCallback(() => {
     dispatch({ type: 'CLOSE_CANCEL_MODAL' });
+  }, []);
+
+  const closeResultDialog = useCallback(() => {
+    dispatch({ type: 'CLOSE_RESULT_DIALOG' });
   }, []);
 
   const reset = useCallback(() => {
@@ -269,6 +293,9 @@ export function useReservationLookup(): ReservationLookupContextValue {
       isCancelModalOpen: state.isCancelModalOpen,
       isCancelling: state.isCancelling,
       cancelError: state.cancelError,
+      isResultDialogOpen: state.isResultDialogOpen,
+      resultDialogSuccess: state.resultDialogSuccess,
+      resultDialogMessage: state.resultDialogMessage,
       canCancel: state.reservationDetail?.status === 'confirmed' ?? false,
       cancellationPolicy: DEFAULT_CANCELLATION_POLICY,
       updateLookupFormField,
@@ -276,12 +303,14 @@ export function useReservationLookup(): ReservationLookupContextValue {
       showCancelModal,
       hideCancelModal,
       cancelReservation,
+      closeResultDialog,
       reset,
     }),
     [
       hideCancelModal,
       lookupReservation,
       cancelReservation,
+      closeResultDialog,
       reset,
       showCancelModal,
       state.isCancelModalOpen,
@@ -291,6 +320,9 @@ export function useReservationLookup(): ReservationLookupContextValue {
       state.lookupError,
       state.lookupForm,
       state.reservationDetail,
+      state.isResultDialogOpen,
+      state.resultDialogSuccess,
+      state.resultDialogMessage,
       updateLookupFormField,
     ],
   );
