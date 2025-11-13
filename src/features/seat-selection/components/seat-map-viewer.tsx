@@ -196,10 +196,11 @@ export const SeatMapViewer = ({
                     </p>
                     <div className="space-y-3">
                       {section.rows.map((row) => {
-                        // 4개씩 그룹으로 나누기
+                        // 4개씩 그룹으로 나누기 (좌석 레이아웃)
+                        const SEATS_PER_GROUP = 4;
                         const groups: (EnhancedSeat[])[] = [];
-                        for (let i = 0; i < row.seats.length; i += 4) {
-                          groups.push(row.seats.slice(i, i + 4));
+                        for (let i = 0; i < row.seats.length; i += SEATS_PER_GROUP) {
+                          groups.push(row.seats.slice(i, i + SEATS_PER_GROUP));
                         }
 
                         return (
@@ -207,7 +208,7 @@ export const SeatMapViewer = ({
                             <div className="text-xs text-gray-500 mb-2 pl-1">
                               {row.rowLabel}행 ({row.seats.length}석)
                             </div>
-                            <div className="flex gap-8 justify-between">
+                            <div className="flex gap-8 justify-start flex-wrap">
                               {groups.map((groupSeats, groupIndex) => (
                                 <div
                                   key={`group-${groupIndex}`}
