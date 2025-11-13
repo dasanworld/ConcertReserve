@@ -27,7 +27,7 @@ export const SelectedSeatsPanel = ({
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-500">
-            좌석을 선택해주세요. (최대 10석)
+            좌석을 선택해주세요. (최대 4석)
           </p>
         </CardContent>
       </Card>
