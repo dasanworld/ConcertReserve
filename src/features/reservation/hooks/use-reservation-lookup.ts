@@ -64,7 +64,7 @@ export interface ReservationLookupContextValue {
   reset: () => void;
 }
 
-const initialLookupState: ReservationLookupState = {
+export const initialLookupState: ReservationLookupState = {
   lookupForm: {
     phoneNumber: '',
     password: '',
@@ -90,7 +90,7 @@ const CancelReservationResponseSchema = z.object({
   releasedSeats: z.number(),
 });
 
-const reservationLookupReducer = (
+export const reservationLookupReducer = (
   state: ReservationLookupState,
   action: ReservationLookupAction,
 ): ReservationLookupState => {

@@ -30,4 +30,8 @@ export const useReservationLookupContext = () => {
 };
 
 // Re-export types and constants from hook for backward compatibility
-export { type CancellationPolicy } from '@/features/reservation/hooks/use-reservation-lookup';
+export {
+  type CancellationPolicy,
+  reservationLookupReducer,
+  initialLookupState,
+} from '@/features/reservation/hooks/use-reservation-lookup';
