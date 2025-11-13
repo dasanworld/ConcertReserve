@@ -44,11 +44,19 @@ const getTierColorClass = (label: string): { box: string; dot: string } => {
 };
 
 export const SeatTierList = ({ seatTiers }: SeatTierListProps) => {
+  // 등급 순서: Special, Premium, Advanced, Regular
+  const tierOrder = ['Special', 'Premium', 'Advanced', 'Regular'];
+  const sortedTiers = [...seatTiers].sort((a, b) => {
+    const orderA = tierOrder.indexOf(a.label);
+    const orderB = tierOrder.indexOf(b.label);
+    return (orderA === -1 ? tierOrder.length : orderA) - (orderB === -1 ? tierOrder.length : orderB);
+  });
+
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">좌석 등급</h2>
       <div className="space-y-2">
-        {seatTiers.map((tier) => {
+        {sortedTiers.map((tier) => {
           const colors = getTierColorClass(tier.label);
           const reservedSeats = tier.totalSeats - tier.availableSeats - tier.temporarilyHeldSeats;
 
