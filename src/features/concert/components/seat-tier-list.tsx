@@ -53,23 +53,23 @@ export const SeatTierList = ({ seatTiers }: SeatTierListProps) => {
   });
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-bold">좌석 등급</h2>
-      <div className="space-y-2">
+    <div className="space-y-2">
+      <h2 className="text-xs font-semibold text-gray-500">좌석 등급</h2>
+      <div className="space-y-1">
         {sortedTiers.map((tier) => {
           const colors = getTierColorClass(tier.label);
           const reservedSeats = tier.totalSeats - tier.availableSeats - tier.temporarilyHeldSeats;
 
           return (
-            <div key={tier.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
+            <div key={tier.id} className="flex items-center gap-2 p-2 bg-white rounded-md border border-gray-200">
               {/* 색상 박스 */}
-              <div className={`w-4 h-4 rounded ${colors.box}`} />
+              <div className={`w-3 h-3 rounded ${colors.box}`} />
 
               {/* 등급명 및 행 범위 */}
               <div className="flex-1">
-                <div className="text-xs font-semibold text-gray-800">
+                <div className="text-[11px] font-medium text-gray-700">
                   {tier.label}
-                  <span className="text-gray-600 font-normal">
+                  <span className="text-gray-500 font-normal">
                     {tier.layoutSummary?.rows?.length > 0
                       ? ` (${tier.layoutSummary.rows[0] ?? ''} ~ ${
                           tier.layoutSummary.rows[tier.layoutSummary.rows.length - 1] ?? ''
@@ -81,15 +81,15 @@ export const SeatTierList = ({ seatTiers }: SeatTierListProps) => {
 
               {/* 가격 */}
               <div className="text-right">
-                <div className="text-xs font-semibold text-gray-900">
+                <div className="text-[11px] font-medium text-gray-700">
                   {tier.price.toLocaleString()}원
                 </div>
               </div>
 
               {/* 잔여/전체 좌석 */}
               <div className="text-right">
-                <div className="text-xs text-gray-600">
-                  <span className="font-semibold text-gray-900">{tier.availableSeats}</span>
+                <div className="text-[11px] text-gray-600">
+                  <span className="font-medium text-gray-700">{tier.availableSeats}</span>
                   <span className="text-gray-500">/{tier.totalSeats}석</span>
                 </div>
               </div>
