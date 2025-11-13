@@ -167,8 +167,10 @@ export const SeatMapViewer = ({
 
   return (
     <div className="space-y-6">
-      <div className="text-center py-3 bg-gray-100 rounded-lg">
+      <div className="flex justify-between items-center py-3 bg-gray-100 rounded-lg px-1">
+        <span className="w-7" />
         <p className="text-sm font-semibold text-gray-600">무대</p>
+        <span className="w-7" />
       </div>
 
       <div className="space-y-8">
@@ -205,7 +207,7 @@ export const SeatMapViewer = ({
                             <div className="text-xs text-gray-500 mb-2 pl-1">
                               {row.rowLabel}행 ({row.seats.length}석)
                             </div>
-                            <div className="flex gap-3">
+                            <div className="flex gap-8 justify-between">
                               {groups.map((groupSeats, groupIndex) => (
                                 <div
                                   key={`group-${groupIndex}`}
