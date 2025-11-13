@@ -31,6 +31,14 @@ export const ConcertListResponseSchema = z.array(ConcertListItemSchema);
 export type ConcertListResponse = z.infer<typeof ConcertListResponseSchema>;
 
 // Seat Tier Schema
+export const SeatTierLayoutSummarySchema = z.object({
+  sections: z.array(z.string()),
+  rows: z.array(z.string()),
+  seatsPerRow: z.number(),
+});
+
+export type SeatTierLayoutSummary = z.infer<typeof SeatTierLayoutSummarySchema>;
+
 export const SeatTierSchema = z.object({
   id: z.string().uuid(),
   label: z.string(),
@@ -39,6 +47,7 @@ export const SeatTierSchema = z.object({
   availableSeats: z.number(),
   temporarilyHeldSeats: z.number(),
   reservedSeats: z.number(),
+  layoutSummary: SeatTierLayoutSummarySchema,
 });
 
 export type SeatTier = z.infer<typeof SeatTierSchema>;

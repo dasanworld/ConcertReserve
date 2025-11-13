@@ -17,7 +17,7 @@ export const useReservationLookupMutation = () => {
   return useMutation({
     mutationFn: async (data: { phoneNumber: string; password: string }) => {
       const response = await apiClient.post<ReservationLookupResponse>(
-        '/reservations/lookup',
+        '/api/reservations/lookup',
         data,
       );
       return response;
@@ -47,4 +47,3 @@ export const useReservationLookupMutation = () => {
     },
   });
 };
-

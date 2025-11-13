@@ -9,6 +9,11 @@ interface SelectedSeatsPanelProps {
   onClearSelection: () => void;
 }
 
+const formatSeatLabel = (seat: SeatInfo) => {
+  const seatNumber = seat.seatNumber.toString().padStart(2, '0');
+  return `${seat.sectionLabel}-${seat.rowLabel}${seatNumber}`;
+};
+
 export const SelectedSeatsPanel = ({
   selectedSeats,
   totalPrice,
@@ -56,7 +61,9 @@ export const SelectedSeatsPanel = ({
               >
                 <div>
                   <span className="font-medium">{seat.seatTierLabel}</span>
-                  <span className="text-gray-600 ml-2">{seat.label}</span>
+                  <span className="text-gray-600 ml-2">
+                    {formatSeatLabel(seat)}
+                  </span>
                 </div>
                 <span className="font-semibold">
                   {seat.price.toLocaleString()}원

@@ -5,17 +5,19 @@ import { Badge } from '@/components/ui/badge';
 import type { SeatDetail } from '@/features/reservation/backend/schema';
 
 interface SelectedSeatsPreviewProps {
-  // 선정된 좌석 목록
   seats: SeatDetail[];
+  totalAmount?: number;
 }
 
 /**
  * 선정된 좌석 미리보기 컴포넌트
  * 선택한 좌석의 등급, 번호, 가격을 표시하고 총액 계산
  */
-export const SelectedSeatsPreview = ({ seats }: SelectedSeatsPreviewProps) => {
-  // 총액 계산
-  const totalAmount = seats.reduce((sum, seat) => sum + seat.price, 0);
+export const SelectedSeatsPreview = ({
+  seats,
+  totalAmount,
+}: SelectedSeatsPreviewProps) => {
+  const computedTotal = totalAmount ?? seats.reduce((sum, seat) => sum + seat.price, 0);
 
   return (
     <Card className="p-4 space-y-4">
@@ -52,7 +54,7 @@ export const SelectedSeatsPreview = ({ seats }: SelectedSeatsPreviewProps) => {
         <div className="flex items-center justify-between">
           <span className="font-semibold">총액</span>
           <span className="text-2xl font-bold text-blue-600">
-            ₩{totalAmount.toLocaleString()}
+            ₩{computedTotal.toLocaleString()}
           </span>
         </div>
 
@@ -64,4 +66,3 @@ export const SelectedSeatsPreview = ({ seats }: SelectedSeatsPreviewProps) => {
     </Card>
   );
 };
-

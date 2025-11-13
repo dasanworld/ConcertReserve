@@ -2,20 +2,17 @@
 
 import { Card } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
-import { useHoldExpiry } from '@/features/reservation/hooks/use-hold-expiry';
 
 interface HoldExpiryTimerProps {
-  // 선점 만료 시각 (ISO 8601 형식)
-  expiresAt: string | null | undefined;
+  remainingSeconds: number;
+  isExpired: boolean;
 }
 
 /**
  * 선점 만료 타이머 컴포넌트
  * 선점 시간 남은 시간을 MM:SS 형식으로 카운트다운
  */
-export const HoldExpiryTimer = ({ expiresAt }: HoldExpiryTimerProps) => {
-  const { remainingSeconds, isExpired } = useHoldExpiry(expiresAt);
-
+export const HoldExpiryTimer = ({ remainingSeconds, isExpired }: HoldExpiryTimerProps) => {
   // 남은 시간 포맷팅 (MM:SS)
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
@@ -50,4 +47,3 @@ export const HoldExpiryTimer = ({ expiresAt }: HoldExpiryTimerProps) => {
     </Card>
   );
 };
-

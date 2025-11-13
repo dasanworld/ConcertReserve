@@ -21,19 +21,15 @@ export const useCreateReservationMutation = () => {
   const router = useRouter();
   const { toast } = useToast();
 
-  return useMutation({
+  return useMutation<CreateReservationResponse, unknown, CreateReservationPayload>({
     mutationFn: async (data: CreateReservationPayload) => {
       const response = await apiClient.post<CreateReservationResponse>(
-        '/reservations',
+        '/api/reservations',
         data,
       );
-      return response;
+      return response.data;
     },
-    onSuccess: (response: any) => {
-      // axios 응답 데이터 추출
-      const data = response.data || response;
-      
-      // 성공 시 예약 완료 페이지로 리다이렉트
+    onSuccess: (data) => {
       toast({
         title: '성공',
         description: '예약이 완료되었습니다.',
@@ -42,18 +38,17 @@ export const useCreateReservationMutation = () => {
       router.push(`/reservations/complete?id=${data.reservationId}`);
     },
     onError: (error: any) => {
-      // 에러 처리
       const errorCode = error?.response?.data?.error?.code;
-      const errorMessage = error?.response?.data?.error?.message || '예약 생성 중 오류가 발생했습니다.';
+      const errorMessage =
+        error?.response?.data?.error?.message || '예약 생성 중 오류가 발생했습니다.';
 
-      // 선점 만료 에러 시 좌석 선택 페이지로 리다이렉트
       if (errorCode === 'SEAT_HOLD_EXPIRED') {
         toast({
           title: '선점 만료',
           description: '좌석 선점 시간이 만료되었습니다. 좌석을 다시 선택해주세요.',
           variant: 'destructive',
         });
-        router.push('/concerts/[concertId]/seats'); // 동적이므로 뒤로가기 권장
+        router.replace('/');
         return;
       }
 
@@ -65,4 +60,3 @@ export const useCreateReservationMutation = () => {
     },
   });
 };
-

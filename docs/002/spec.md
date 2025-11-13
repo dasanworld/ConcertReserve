@@ -188,6 +188,10 @@
     {
       id: string,
       label: string,         // 예: "A-1", "B-5"
+      sectionLabel: string,  // 예: "SP1", "PR3" (구역/블록)
+      rowLabel: string,      // 예: "A", "B"
+      rowNumber: number,     // 행 정렬용 숫자
+      seatNumber: number,    // 행 내 좌석 번호
       status: 'available' | 'temporarily_held' | 'reserved',
       seatTierId: string,
       holdExpiresAt?: string  // ISO 8601 format, status가 temporarily_held인 경우에만
@@ -195,6 +199,8 @@
   ]
 }
 ```
+
+- 각 좌석 엔티티는 `sectionLabel`(구역), `rowLabel`/`rowNumber`(행), `seatNumber`(열)을 포함하여 실제 좌석 배치도를 그대로 재현할 수 있다.
 
 ### 2. POST `/api/seats/hold`
 **목적**: 선택한 좌석 임시 선점

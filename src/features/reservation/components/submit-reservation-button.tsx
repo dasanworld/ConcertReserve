@@ -12,6 +12,7 @@ interface SubmitReservationButtonProps {
   isPending: boolean;
   // 클릭 핸들러
   onSubmit: (data: Partial<ReservationFormData>) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -23,6 +24,7 @@ export const SubmitReservationButton = ({
   form,
   isPending,
   onSubmit,
+  disabled = false,
 }: SubmitReservationButtonProps) => {
   // 폼이 유효한지 확인
   const isFormValid = form.formState.isValid;
@@ -30,7 +32,7 @@ export const SubmitReservationButton = ({
   return (
     <Button
       type="button"
-      disabled={!isFormValid || isPending}
+      disabled={!isFormValid || isPending || disabled}
       onClick={form.handleSubmit(onSubmit)}
       className="w-full"
       size="lg"
@@ -46,4 +48,3 @@ export const SubmitReservationButton = ({
     </Button>
   );
 };
-

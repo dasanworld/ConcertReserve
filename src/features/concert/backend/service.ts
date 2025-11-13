@@ -22,6 +22,29 @@ const CONCERT_TABLE = 'concerts';
 const fallbackThumbnail = (id: string) =>
   `https://picsum.photos/seed/${encodeURIComponent(id)}/400/300`;
 
+const toRowLabel = (rowNumber: number | null): string => {
+  if (!rowNumber || rowNumber <= 0) return 'ROW';
+  return String.fromCharCode(64 + rowNumber);
+};
+
+const sectionSorter = (a: string, b: string) => {
+  const prefixA = a.replace(/\d+$/, '');
+  const prefixB = b.replace(/\d+$/, '');
+  if (prefixA === prefixB) {
+    const numA = Number(a.replace(/^\D+/, '')) || 0;
+    const numB = Number(b.replace(/^\D+/, '')) || 0;
+    return numA - numB;
+  }
+  return prefixA.localeCompare(prefixB);
+};
+
+const rowSorter = (a: string, b: string) => {
+  if (a.length === 1 && b.length === 1) {
+    return a.charCodeAt(0) - b.charCodeAt(0);
+  }
+  return a.localeCompare(b);
+};
+
 export const getConcertList = async (
   client: SupabaseClient,
 ): Promise<
@@ -123,7 +146,7 @@ export const getConcertDetail = async (
   // 3. 모든 좌석 정보 조회 (상태별)
   const { data: seatsData, error: seatsError } = await client
     .from('seats')
-    .select('seat_tier_id, status')
+    .select('seat_tier_id, status, section_label, row_label, row_number, seat_number')
     .eq('concert_id', concertId)
     .is('deleted_at', null);
 
@@ -140,6 +163,22 @@ export const getConcertDetail = async (
     const availableSeats = tierSeats.filter((s) => s.status === 'available').length;
     const temporarilyHeldSeats = tierSeats.filter((s) => s.status === 'temporarily_held').length;
     const reservedSeats = tierSeats.filter((s) => s.status === 'reserved').length;
+    const sectionSet = new Set<string>();
+    const rowSet = new Set<string>();
+    const rowSeatCounts = new Map<string, number>();
+
+    for (const seat of tierSeats) {
+      const sectionLabel = seat.section_label ?? tier.label;
+      sectionSet.add(sectionLabel);
+
+      const rowLabel = seat.row_label ?? toRowLabel(seat.row_number ?? null);
+      rowSet.add(rowLabel);
+
+      const currentCount = rowSeatCounts.get(rowLabel) ?? 0;
+      rowSeatCounts.set(rowLabel, currentCount + 1);
+    }
+
+    const seatsPerRow = Math.max(...rowSeatCounts.values(), 0);
 
     return {
       id: tier.id,
@@ -149,6 +188,11 @@ export const getConcertDetail = async (
       availableSeats,
       temporarilyHeldSeats,
       reservedSeats,
+      layoutSummary: {
+        sections: Array.from(sectionSet).sort(sectionSorter),
+        rows: Array.from(rowSet).sort(rowSorter),
+        seatsPerRow: Number.isFinite(seatsPerRow) ? seatsPerRow : 0,
+      },
     };
   });
 

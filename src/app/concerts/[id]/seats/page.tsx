@@ -2,53 +2,41 @@
 
 import { use } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSeatsQuery } from '@/features/seat-selection/hooks/useSeatsQuery';
-import { useSeatHoldMutation } from '@/features/seat-selection/hooks/useSeatHoldMutation';
-import { useSeatSelection } from '@/features/seat-selection/hooks/useSeatSelection';
 import { SeatTierInfoCard } from '@/features/seat-selection/components/seat-tier-info';
 import { SeatMapViewer } from '@/features/seat-selection/components/seat-map-viewer';
 import { SelectedSeatsPanel } from '@/features/seat-selection/components/selected-seats-panel';
 import { SeatHoldButton } from '@/features/seat-selection/components/seat-hold-button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  SeatSelectionProvider,
+  useSeatSelectionContext,
+} from '@/features/seat-selection/state/seat-selection-context';
 
 interface SeatSelectionPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default function SeatSelectionPage({ params }: SeatSelectionPageProps) {
-  const { id: concertId } = use(params);
+const SeatSelectionContent = () => {
   const router = useRouter();
-
-  const { data, isLoading, error } = useSeatsQuery(concertId);
-  const holdMutation = useSeatHoldMutation();
-
   const {
-    selectedSeatIds,
+    concertTitle,
+    seatTiers,
+    enhancedSeatMap,
+    selectedSeatIdSet,
     selectedSeats,
-    totalPrice,
+    totalAmount,
+    selectionError,
+    isSeatMapLoading,
+    seatMapError,
+    canSubmitHold,
     toggleSeat,
     clearSelection,
-  } = useSeatSelection(data?.seats || []);
+    holdSeats,
+    isHolding,
+    holdErrorMessage,
+  } = useSeatSelectionContext();
 
-  const handleHoldSeats = async () => {
-    try {
-      const response = await holdMutation.mutateAsync({
-        concertId,
-        seatIds: Array.from(selectedSeatIds),
-      });
-
-      // 선점 성공 시 예약 정보 입력 페이지로 이동
-      // TODO: 선점된 좌석 정보를 query parameter 또는 state로 전달
-      router.push(
-        `/book?concertId=${concertId}&holdExpiresAt=${encodeURIComponent(response.holdExpiresAt)}`
-      );
-    } catch (err) {
-      console.error('Failed to hold seats:', err);
-      // 에러 처리 (토스트 메시지 등)
-    }
-  };
-
-  if (isLoading) {
+  if (isSeatMapLoading) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <Skeleton className="h-8 w-64 mb-6" />
@@ -66,7 +54,7 @@ export default function SeatSelectionPage({ params }: SeatSelectionPageProps) {
     );
   }
 
-  if (error) {
+  if (seatMapError) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="text-center">
@@ -74,7 +62,7 @@ export default function SeatSelectionPage({ params }: SeatSelectionPageProps) {
             좌석 정보를 불러올 수 없습니다
           </h1>
           <p className="text-gray-600 mb-4">
-            {error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'}
+            {seatMapError.message}
           </p>
           <button
             type="button"
@@ -88,13 +76,8 @@ export default function SeatSelectionPage({ params }: SeatSelectionPageProps) {
     );
   }
 
-  if (!data) {
-    return null;
-  }
-
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* 헤더 */}
       <div className="mb-6">
         <button
           type="button"
@@ -103,45 +86,57 @@ export default function SeatSelectionPage({ params }: SeatSelectionPageProps) {
         >
           ← 뒤로 가기
         </button>
-        <h1 className="text-3xl font-bold tracking-tight">{data.concertTitle}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{concertTitle}</h1>
         <p className="mt-2 text-gray-600">좌석을 선택해주세요</p>
       </div>
 
-      {/* 메인 콘텐츠 */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* 좌측: 등급 정보 + 좌석 배치도 */}
         <div className="lg:col-span-2 space-y-6">
-          <SeatTierInfoCard tiers={data.tiers} />
+          <SeatTierInfoCard tiers={seatTiers} />
           <SeatMapViewer
-            seats={data.seats}
-            selectedSeatIds={selectedSeatIds}
+            seats={enhancedSeatMap}
+            selectedSeatIds={selectedSeatIdSet}
             onSeatClick={toggleSeat}
+            disabled={!canSubmitHold}
           />
         </div>
 
-        {/* 우측: 선택된 좌석 + 예약 버튼 */}
         <div className="space-y-6">
           <SelectedSeatsPanel
             selectedSeats={selectedSeats}
-            totalPrice={totalPrice}
+            totalPrice={totalAmount}
             onClearSelection={clearSelection}
           />
 
           <SeatHoldButton
             selectedCount={selectedSeats.length}
-            isLoading={holdMutation.isPending}
-            onHoldSeats={handleHoldSeats}
+            isLoading={isHolding}
+            onHoldSeats={holdSeats}
           />
 
-          {holdMutation.isError && (
+          {selectionError && (
             <div className="text-sm text-red-600 text-center">
-              {holdMutation.error instanceof Error
-                ? holdMutation.error.message
-                : '좌석 선점에 실패했습니다. 다시 시도해주세요.'}
+              {selectionError}
+            </div>
+          )}
+
+          {holdErrorMessage && (
+            <div className="text-sm text-red-600 text-center">
+              {holdErrorMessage}
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+};
+
+export default function SeatSelectionPage({ params }: SeatSelectionPageProps) {
+  const { id: concertId } = use(params);
+
+  return (
+    <SeatSelectionProvider concertId={concertId}>
+      <SeatSelectionContent />
+    </SeatSelectionProvider>
   );
 }

@@ -24,6 +24,10 @@ export const SeatRowSchema = z.object({
   label: z.string(),
   status: SeatStatusSchema,
   hold_expires_at: z.string().nullable(),
+  section_label: z.string().nullable(),
+  row_label: z.string().nullable(),
+  row_number: z.number().int().nullable(),
+  seat_number: z.number().int().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable(),
@@ -49,6 +53,10 @@ export const SeatInfoSchema = z.object({
   seatTierId: z.string().uuid(),
   seatTierLabel: z.string(),
   label: z.string(),
+  sectionLabel: z.string(),
+  rowLabel: z.string(),
+  rowNumber: z.number().int(),
+  seatNumber: z.number().int(),
   status: SeatStatusSchema,
   price: z.number(),
   holdExpiresAt: z.string().nullable(),
@@ -73,10 +81,19 @@ export const SeatHoldRequestSchema = z.object({
 
 export type SeatHoldRequest = z.infer<typeof SeatHoldRequestSchema>;
 
+export const HeldSeatSummarySchema = z.object({
+  seatId: z.string().uuid(),
+  label: z.string(),
+  seatTierLabel: z.string(),
+  price: z.number(),
+});
+
+export type HeldSeatSummary = z.infer<typeof HeldSeatSummarySchema>;
+
 export const SeatHoldResponseSchema = z.object({
-  success: z.boolean(),
   holdExpiresAt: z.string(),
-  seatIds: z.array(z.string().uuid()),
+  heldSeats: z.array(HeldSeatSummarySchema),
+  totalAmount: z.number(),
 });
 
 export type SeatHoldResponse = z.infer<typeof SeatHoldResponseSchema>;

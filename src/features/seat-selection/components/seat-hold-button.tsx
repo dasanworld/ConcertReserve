@@ -6,14 +6,16 @@ interface SeatHoldButtonProps {
   selectedCount: number;
   isLoading: boolean;
   onHoldSeats: () => void;
+  disabled?: boolean;
 }
 
 export const SeatHoldButton = ({
   selectedCount,
   isLoading,
   onHoldSeats,
+  disabled = false,
 }: SeatHoldButtonProps) => {
-  const isDisabled = selectedCount === 0 || isLoading;
+  const isDisabled = disabled || selectedCount === 0 || isLoading;
 
   const getButtonText = () => {
     if (isLoading) {

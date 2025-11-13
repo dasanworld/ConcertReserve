@@ -25,6 +25,7 @@
 2. 시스템은 다음 정보를 데이터베이스에서 조회한다:
    - 콘서트 기본 정보 (`concerts` 테이블)
    - 좌석 등급별 가격 정보 (`concert_seat_tiers` 테이블)
+   - 좌석 구역/행 배치 요약 (`seats` 테이블의 section/row 메타데이터)
    - 전체 좌석 수 및 예약된 좌석 수 (`seats` 테이블에서 `status = 'reserved'` 개수 집계)
 3. 시스템은 실시간 잔여 좌석 수를 계산한다:
    - 잔여 좌석 = 전체 좌석 수 - `status = 'reserved'` 좌석 수
@@ -136,7 +137,12 @@
           "price": 250000,
           "totalSeats": 48,
           "reservedSeats": 0,
-          "availableSeats": 48
+          "availableSeats": 48,
+          "layoutSummary": {
+            "sections": ["SP1", "SP2"],
+            "rows": ["A", "B", "C", "D"],
+            "seatsPerRow": 6
+          }
         },
         {
           "id": "uuid",
@@ -144,7 +150,12 @@
           "price": 180000,
           "totalSeats": 150,
           "reservedSeats": 30,
-          "availableSeats": 120
+          "availableSeats": 120,
+          "layoutSummary": {
+            "sections": ["PR1", "PR2", "PR3", "PR4"],
+            "rows": ["A", "B", "C", "D"],
+            "seatsPerRow": 4
+          }
         }
       ]
     }

@@ -1,72 +1,46 @@
 'use client';
 
-import { Controller } from 'react-hook-form';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import type { LookupFormData } from '@/features/reservation/hooks/use-lookup-form-validation';
-import type { UseFormReturn } from 'react-hook-form';
+import { Label } from '@/components/ui/label';
+import { useReservationLookupContext } from '@/features/reservation/lookup/reservation-lookup-provider';
 
-interface LookupFormProps {
-  // react-hook-form의 form 객체
-  form: UseFormReturn<LookupFormData>;
-}
+export const LookupForm = () => {
+  const { lookupForm, updateLookupFormField, lookupError } =
+    useReservationLookupContext();
 
-/**
- * 예약 조회 입력 폼 컴포넌트
- * 휴대폰 번호와 비밀번호 입력 필드 제공
- */
-export const LookupForm = ({ form }: LookupFormProps) => {
   return (
-    <Form {...form}>
-      <form className="space-y-6">
-        {/* 휴대폰 번호 필드 */}
-        <FormField
-          control={form.control}
-          name="phoneNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>휴대폰 번호</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  type="tel"
-                  placeholder="010-1234-5678"
-                  autoComplete="tel"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form className="space-y-6" onSubmit={(event) => event.preventDefault()}>
+      <div className="space-y-2">
+        <Label htmlFor="lookup-phone">휴대폰 번호</Label>
+        <Input
+          id="lookup-phone"
+          type="tel"
+          placeholder="010-1234-5678"
+          autoComplete="tel"
+          value={lookupForm.phoneNumber}
+          onChange={(event) =>
+            updateLookupFormField('phoneNumber', event.target.value)
+          }
         />
+      </div>
 
-        {/* 비밀번호 필드 */}
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>비밀번호</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  type="password"
-                  placeholder="비밀번호를 입력해주세요"
-                  autoComplete="current-password"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="lookup-password">비밀번호</Label>
+        <Input
+          id="lookup-password"
+          type="password"
+          placeholder="비밀번호를 입력해주세요"
+          autoComplete="current-password"
+          value={lookupForm.password}
+          onChange={(event) =>
+            updateLookupFormField('password', event.target.value)
+          }
         />
-      </form>
-    </Form>
+      </div>
+
+      {lookupError && (
+        <p className="text-sm text-red-600">{lookupError}</p>
+      )}
+    </form>
   );
 };
-

@@ -98,6 +98,10 @@
 | concert_id | uuid | FK → concerts(id) | 좌석이 속한 콘서트 |
 | seat_tier_id | uuid | FK → concert_seat_tiers(id) | 좌석 등급/가격 매핑 |
 | label | text | NOT NULL | 좌석 표기 (행/번호 등) |
+| section_label | text | NULL | 좌석 구역/블록(예: SP1, PR3) |
+| row_label | text | NULL | 행 라벨 (예: A, B, C) |
+| row_number | int | NULL | 행 정렬을 위한 숫자 값 |
+| seat_number | int | NULL | 행 내 좌석 번호 |
 | status | seat_status | NOT NULL, default 'available' | 좌석 상태 |
 | hold_expires_at | timestamptz | NULL | 임시 선점 만료 시각 |
 | created_at | timestamptz | NOT NULL, default now() | 생성 시각 |
@@ -108,6 +112,7 @@
 - `UNIQUE (concert_id, label)` 좌석 중복 방지
 - `CREATE INDEX idx_seats_hold_cleanup ON seats (hold_expires_at) WHERE status = 'temporarily_held';`
 - `CHECK ((status = 'temporarily_held' AND hold_expires_at IS NOT NULL) OR (status <> 'temporarily_held'))`
+- `section_label`, `row_label`, `row_number`, `seat_number` 조합으로 좌석 배치도(UI)의 구역/행/열 정보를 제공한다.
 
 ### reservations
 | 컬럼 | 타입 | 속성 | 설명 |

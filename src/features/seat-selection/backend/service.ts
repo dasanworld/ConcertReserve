@@ -26,6 +26,32 @@ const SEATS_TABLE = 'seats';
 // 5분 선점 시간 (밀리초)
 const HOLD_DURATION_MS = 5 * 60 * 1000;
 
+const deriveRowNumber = (label: string): number | null => {
+  const match = label.match(/-([A-Z])\d+$/);
+  if (!match) {
+    return null;
+  }
+  const charCode = match[1].charCodeAt(0) - 64;
+  return charCode > 0 ? charCode : null;
+};
+
+const deriveSeatNumber = (label: string): number | null => {
+  const match = label.match(/(\d+)$/);
+  return match ? Number(match[1]) : null;
+};
+
+const deriveSectionLabel = (label: string): string | null => {
+  const match = label.match(/^([A-Z]+[0-9]+)/);
+  return match ? match[1] : null;
+};
+
+const toRowLabel = (rowNumber: number | null): string => {
+  if (!rowNumber || rowNumber <= 0) {
+    return 'ROW';
+  }
+  return String.fromCharCode(64 + rowNumber);
+};
+
 export const getSeatsByConcertId = async (
   client: SupabaseClient,
   concertId: string,
@@ -127,11 +153,20 @@ export const getSeatsByConcertId = async (
   // 5. 좌석 정보 매핑
   const seats = validatedSeats.map((seat) => {
     const tier = tierMap.get(seat.seat_tier_id);
+    const sectionLabel = seat.section_label ?? deriveSectionLabel(seat.label) ?? tier?.label ?? 'GENERAL';
+    const computedRowNumber = seat.row_number ?? deriveRowNumber(seat.label) ?? 1;
+    const computedSeatNumber = seat.seat_number ?? deriveSeatNumber(seat.label) ?? 1;
+    const rowLabel = seat.row_label ?? toRowLabel(computedRowNumber);
+
     return {
       id: seat.id,
       seatTierId: seat.seat_tier_id,
       seatTierLabel: tier?.label || '',
       label: seat.label,
+      sectionLabel,
+      rowLabel,
+      rowNumber: computedRowNumber,
+      seatNumber: computedSeatNumber,
       status: seat.status,
       price: tier ? Number(tier.price) : 0,
       holdExpiresAt: seat.hold_expires_at,
@@ -184,7 +219,7 @@ export const holdSeats = async (
   // 2-1. 현재 좌석 상태 확인
   const { data: currentSeats, error: fetchError } = await client
     .from(SEATS_TABLE)
-    .select('id, status, hold_expires_at')
+    .select('id, status, hold_expires_at, label, seat_tier_id')
     .eq('concert_id', concertId)
     .in('id', seatIds)
     .is('deleted_at', null);
@@ -250,10 +285,40 @@ export const holdSeats = async (
   }
 
   // 3. 응답 데이터 구성
+  // 2-5. 선점된 좌석 상세 정보 조회
+  const seatTierIds = Array.from(
+    new Set((currentSeats ?? []).map((seat) => seat.seat_tier_id)),
+  );
+
+  const { data: tierRows, error: tierFetchError } = await client
+    .from(SEAT_TIERS_TABLE)
+    .select('id, label, price')
+    .in('id', seatTierIds.length > 0 ? seatTierIds : ['00000000-0000-0000-0000-000000000000']);
+
+  if (tierFetchError) {
+    return failure(500, seatSelectionErrorCodes.fetchFailed, tierFetchError.message);
+  }
+
+  const tierMap = new Map(
+    (tierRows ?? []).map((tier) => [tier.id, { label: tier.label, price: Number(tier.price) }]),
+  );
+
+  const heldSeats = (currentSeats ?? []).map((seat) => {
+    const tier = tierMap.get(seat.seat_tier_id);
+    return {
+      seatId: seat.id,
+      label: seat.label,
+      seatTierLabel: tier?.label ?? '미지정',
+      price: tier?.price ?? 0,
+    };
+  });
+
+  const totalAmount = heldSeats.reduce((sum, seat) => sum + seat.price, 0);
+
   const response = {
-    success: true,
     holdExpiresAt,
-    seatIds,
+    heldSeats,
+    totalAmount,
   };
 
   // 4. 스키마 검증
