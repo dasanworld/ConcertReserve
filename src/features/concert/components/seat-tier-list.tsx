@@ -67,7 +67,7 @@ export const SeatTierList = ({ seatTiers }: SeatTierListProps) => {
 
               {/* 등급명 및 행 범위 */}
               <div className="flex-1">
-                <div className="text-sm font-semibold text-gray-800">
+                <div className="text-xs font-semibold text-gray-800">
                   {tier.label}
                   <span className="text-gray-600 font-normal">
                     {tier.layoutSummary?.rows?.length > 0
@@ -81,14 +81,14 @@ export const SeatTierList = ({ seatTiers }: SeatTierListProps) => {
 
               {/* 가격 */}
               <div className="text-right">
-                <div className="font-semibold text-gray-900">
+                <div className="text-xs font-semibold text-gray-900">
                   {tier.price.toLocaleString()}원
                 </div>
               </div>
 
               {/* 잔여/전체 좌석 */}
               <div className="text-right">
-                <div className="text-sm text-gray-600">
+                <div className="text-xs text-gray-600">
                   <span className="font-semibold text-gray-900">{tier.availableSeats}</span>
                   <span className="text-gray-500">/{tier.totalSeats}석</span>
                 </div>
