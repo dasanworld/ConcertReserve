@@ -29,11 +29,14 @@ export const useCancelReservationMutation = (reservationId: string) => {
       );
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (response: any) => {
+      // axios 응답 데이터 추출
+      const data = response.data || response;
+      
       // 성공 시 토스트 메시지 표시
       toast({
         title: '취소 완료',
-        description: data.message,
+        description: data.message || '예약이 취소되었습니다.',
         variant: 'default',
       });
 

@@ -22,7 +22,10 @@ export const useReservationLookupMutation = () => {
       );
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (response: any) => {
+      // axios 응답 데이터 추출
+      const data = response.data || response;
+      
       // 성공 시 예약 상세 페이지로 리다이렉트
       toast({
         title: '성공',

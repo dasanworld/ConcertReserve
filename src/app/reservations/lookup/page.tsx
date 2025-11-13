@@ -18,8 +18,9 @@ export default function ReservationLookupPage() {
   const lookupMutation = useReservationLookupMutation();
 
   // 폼 제출 핸들러
-  const handleSubmit = (data: { phoneNumber: string; password: string }) => {
-    lookupMutation.mutate(data);
+  const handleSubmit = (data: Partial<{ phoneNumber: string; password: string }>) => {
+    if (!data.phoneNumber || !data.password) return;
+    lookupMutation.mutate(data as { phoneNumber: string; password: string });
   };
 
   return (

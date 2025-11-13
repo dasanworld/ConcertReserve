@@ -11,7 +11,7 @@ interface SubmitLookupButtonProps {
   // 로딩 상태
   isPending: boolean;
   // 클릭 핸들러
-  onSubmit: (data: LookupFormData) => void;
+  onSubmit: (data: Partial<LookupFormData>) => void;
 }
 
 /**

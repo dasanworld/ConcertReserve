@@ -55,8 +55,8 @@ export default function ReservationFormPage() {
   }, [searchParams, router]);
 
   // 폼 제출 핸들러
-  const handleSubmit = (data: { customerName: string; phoneNumber: string; password: string }) => {
-    if (selectedSeats.length === 0) {
+  const handleSubmit = (data: Partial<{ customerName: string; phoneNumber: string; password: string }>) => {
+    if (selectedSeats.length === 0 || !data.customerName || !data.phoneNumber || !data.password) {
       return;
     }
 

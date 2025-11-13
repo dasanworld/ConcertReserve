@@ -11,7 +11,7 @@ interface SubmitReservationButtonProps {
   // 로딩 상태
   isPending: boolean;
   // 클릭 핸들러
-  onSubmit: (data: ReservationFormData) => void;
+  onSubmit: (data: Partial<ReservationFormData>) => void;
 }
 
 /**
