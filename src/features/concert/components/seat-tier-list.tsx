@@ -100,8 +100,10 @@ export const SeatTierList = ({ seatTiers }: SeatTierListProps) => {
 
                 return (
                   <tr key={tier.id} className={`border-b last:border-b-0 ${colors.border}`}>
-                    <td className={`py-2 px-2 font-semibold ${colors.text} rounded px-2.5 inline-block`}>
-                      {tier.label}
+                    <td className="py-2 px-2">
+                      <span className={`font-semibold ${colors.text} ${colors.bg} rounded px-2 py-0.5 text-xs inline-block`}>
+                        {tier.label}
+                      </span>
                     </td>
                     <td className="py-2 px-2 font-medium text-gray-700">
                       {tier.price.toLocaleString()}원

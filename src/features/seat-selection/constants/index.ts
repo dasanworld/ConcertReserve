@@ -30,7 +30,7 @@ export const SEAT_STATUS_TEXT_COLORS = {
 // 좌석 선택 제한
 export const SEAT_SELECTION_LIMITS = {
   MIN: 1,
-  MAX: 10,
+  MAX: 4,
 } as const;
 
 // 선점 시간 (밀리초)

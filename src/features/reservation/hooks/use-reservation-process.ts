@@ -129,26 +129,32 @@ export function useReservationProcess(): ReservationProcessContextValue {
   const [isProcessingRedirect, setIsProcessingRedirect] = useState(false);
 
   // ========== Zustand & Form & React Query ==========
+  const getHeldInfo = useReservationSession((session) => session.heldInfo);
   const consumeHeldInfo = useReservationSession((session) => session.consumeHeldInfo);
   const clearHeldInfo = useReservationSession((session) => session.clearHeldInfo);
   const form = useReservationFormValidation();
   const createReservationMutation = useCreateReservationMutation();
 
-  // ========== Effect #1: 초기화 ==========
+  // ========== Effect #1: 초기화 (마운트 후 한 번만 실행) ==========
   useEffect(() => {
     if (state.isInitialized || isProcessingRedirect) {
       return;
     }
-    const heldInfo = consumeHeldInfo();
+    
+    // 클라이언트 마운트 후 Zustand store에서 데이터 읽기
+    // 먼저 데이터가 있는지 확인만 함 (아직 consume하지 않음)
+    const heldInfo = getHeldInfo;
 
     if (!heldInfo) {
       setIsProcessingRedirect(true);
-      router.replace('/');
+      // 선점된 좌석이 없으면 콘서트 목록으로 이동
+      router.replace('/concerts');
       return;
     }
 
+    // 이 시점에서 데이터가 확인되었으므로 상태 초기화
     dispatch({ type: 'INITIALIZE_WITH_HELD_INFO', payload: heldInfo });
-  }, [consumeHeldInfo, isProcessingRedirect, router, state.isInitialized]);
+  }, [getHeldInfo, isProcessingRedirect, router, state.isInitialized]);
 
   // ========== Effect #2: 카운트다운 타이머 ==========
   useEffect(() => {
@@ -166,16 +172,22 @@ export function useReservationProcess(): ReservationProcessContextValue {
     if (!state.isInitialized || !state.hasExpired || isProcessingRedirect) {
       return;
     }
-    toast({
-      title: '선점 만료',
-      description: '좌석 선점 시간이 만료되었습니다. 다시 선택해주세요.',
-      variant: 'destructive',
-    });
-    if (state.concertId) {
-      router.replace(`/concerts/${state.concertId}`);
-    } else {
-      router.replace('/');
-    }
+    
+    // 네트워크 요청 완료 후 실행을 위해 setTimeout으로 약간 지연
+    const timeoutId = setTimeout(() => {
+      toast({
+        title: '선점 만료',
+        description: '좌석 선점 시간이 만료되었습니다. 다시 선택해주세요.',
+        variant: 'destructive',
+      });
+      if (state.concertId) {
+        router.replace(`/concerts/${state.concertId}`);
+      } else {
+        router.replace('/concerts');
+      }
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
   }, [
     isProcessingRedirect,
     router,
@@ -203,6 +215,8 @@ export function useReservationProcess(): ReservationProcessContextValue {
           phoneNumber: data.phoneNumber,
           password: data.password,
         });
+        // 예약 생성 성공 후 store 정리
+        consumeHeldInfo();
         clearHeldInfo();
       } catch (error) {
         let message = '예약 생성 중 오류가 발생했습니다.';

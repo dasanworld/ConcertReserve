@@ -31,16 +31,21 @@ export const useCreateReservationMutation = () => {
         '/api/reservations',
         data,
       );
+      console.log('✅ Create reservation response:', response.data);
       return response.data;
     },
     onSuccess: (data) => {
+      console.log('🎉 Mutation onSuccess:', data);
+      console.log('📝 Reservation ID:', data.reservationId);
       setRecentReservationId(data.reservationId);
       toast({
         title: '성공',
         description: '예약이 완료되었습니다.',
         variant: 'default',
       });
-      router.push(`/reservations/complete?id=${data.reservationId}`);
+      const redirectUrl = `/reservations/complete?id=${data.reservationId}`;
+      console.log('🔗 Redirecting to:', redirectUrl);
+      router.push(redirectUrl);
     },
     onError: (error: any) => {
       const errorCode = error?.response?.data?.error?.code;

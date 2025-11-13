@@ -34,6 +34,20 @@ const ReservationProcessContent = () => {
     );
   }
 
+  // isReady 상태가 아니면 로딩 상태 유지 (Effect에서 리다이렉트 처리)
+  if (!isReady) {
+    return (
+      <main className="min-h-screen bg-gray-50 py-12">
+        <div className="mx-auto max-w-2xl px-4 space-y-6">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </main>
+    );
+  }
+
   if (heldSeats.length === 0) {
     return (
       <main className="min-h-screen bg-gray-50 py-12">

@@ -146,13 +146,7 @@ export const registerReservationRoutes = (app: Hono<AppEnv>) => {
     }
 
     // 성공 시 201 Created 반환
-    return c.json(
-      {
-        success: true,
-        data: result.data,
-      },
-      201
-    );
+    return respond(c, result);
   });
 
   // DELETE /api/reservations/:id - 예약 취소
