@@ -15,21 +15,27 @@ WHERE concert_id = 'b80ac6ea-9221-4a76-81e0-b0f5e316f52f'
 
 -- Recreate 48 seats as 3 rows × 16 seats
 INSERT INTO public.seats (
-  id, concert_id, seat_tier_id, section_label, row_number, row_label, seat_number, 
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number, 
   status, created_at, updated_at
 )
 SELECT
   gen_random_uuid(),
   'b80ac6ea-9221-4a76-81e0-b0f5e316f52f',
   (SELECT id FROM concert_seat_tiers WHERE concert_id = 'b80ac6ea-9221-4a76-81e0-b0f5e316f52f' AND label = 'Special'),
+  'SP-' || CHR(65 + (row_num - 1)) || LPAD((seat_num::text), 2, '0'),
   'SP',
-  CASE WHEN row_num <= 16 THEN 1 WHEN row_num <= 32 THEN 2 ELSE 3 END,
-  CASE WHEN row_num <= 16 THEN 'A' WHEN row_num <= 32 THEN 'B' ELSE 'C' END,
-  CASE WHEN row_num <= 16 THEN row_num WHEN row_num <= 32 THEN row_num - 16 ELSE row_num - 32 END,
+  row_num,
+  CHR(65 + (row_num - 1)),
+  seat_num,
   'available',
   NOW(),
   NOW()
-FROM generate_series(1, 48) AS row_num;
+FROM (
+  SELECT generate_series(1, 3) as row_num
+) rows,
+(
+  SELECT generate_series(1, 16) as seat_num
+) seats;
 
 -- BTS Special tier - Recreate seats correctly
 DELETE FROM public.seats
@@ -42,18 +48,24 @@ WHERE concert_id = '2b4820e5-be09-4223-b41c-6da9c90b758a'
 
 -- Recreate 48 seats as 3 rows × 16 seats
 INSERT INTO public.seats (
-  id, concert_id, seat_tier_id, section_label, row_number, row_label, seat_number,
+  id, concert_id, seat_tier_id, label, section_label, row_number, row_label, seat_number,
   status, created_at, updated_at
 )
 SELECT
   gen_random_uuid(),
   '2b4820e5-be09-4223-b41c-6da9c90b758a',
   (SELECT id FROM concert_seat_tiers WHERE concert_id = '2b4820e5-be09-4223-b41c-6da9c90b758a' AND label = 'Special'),
+  'SP-' || CHR(65 + (row_num - 1)) || LPAD((seat_num::text), 2, '0'),
   'SP',
-  CASE WHEN row_num <= 16 THEN 1 WHEN row_num <= 32 THEN 2 ELSE 3 END,
-  CASE WHEN row_num <= 16 THEN 'A' WHEN row_num <= 32 THEN 'B' ELSE 'C' END,
-  CASE WHEN row_num <= 16 THEN row_num WHEN row_num <= 32 THEN row_num - 16 ELSE row_num - 32 END,
+  row_num,
+  CHR(65 + (row_num - 1)),
+  seat_num,
   'available',
   NOW(),
   NOW()
-FROM generate_series(1, 48) AS row_num;
+FROM (
+  SELECT generate_series(1, 3) as row_num
+) rows,
+(
+  SELECT generate_series(1, 16) as seat_num
+) seats;
