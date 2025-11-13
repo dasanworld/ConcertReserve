@@ -3,6 +3,9 @@
 import { useConcertList } from "@/features/concert/hooks/useConcertListQuery";
 import { ConcertCardList } from "@/features/concert/components/concert-card-list";
 
+// Force dynamic rendering - Vercel이 정적 내보내기를 하지 않도록 함
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const { concerts, isLoading: isConcertsLoading, error } = useConcertList();
 
