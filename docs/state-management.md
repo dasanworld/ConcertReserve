@@ -65,6 +65,48 @@ graph TD
 
 ---
 
+### 1.3 공통 상수/타입
+
+```typescript
+// src/features/constants/selection.ts
+export const SELECTION_LIMIT = 4 as const;
+export const HOLD_WARNING_THRESHOLD_SEC = 60 as const;
+export const POLL_INTERVAL = { default: 5000 as const, urgent: 2000 as const };
+
+// src/lib/remote/types.ts
+export interface ApiError {
+  status: number;
+  errorCode: string;
+  message: string;
+  details?: unknown;
+  fieldErrors?: Record<string, string>;
+}
+
+// 기능별 에러 코드 (literal union)
+export type HoldErrorCode =
+  | 'SEAT_UNAVAILABLE'
+  | 'HOLD_LIMIT_EXCEEDED'
+  | 'CONCERT_NOT_AVAILABLE'
+  | 'HOLD_EXPIRED';
+
+export interface HoldSeatsError extends ApiError {
+  errorCode: HoldErrorCode;
+  unavailableSeats?: string[];
+}
+
+// 좌석(시각화용 보강)
+export interface EnhancedSeat {
+  id: string;
+  label: string;
+  tierLabel: string;
+  price: number;
+  status: SeatStatus; // 'available' | 'temporarily_held' | 'reserved'
+  ephemeralStatus?: 'unavailable_on_hold' | 'recently_released';
+}
+```
+
+---
+
 ## 2. 서버 상태 인터페이스 (React Query Hooks)
 
 ### 2.1 좌석 관련 훅
@@ -83,7 +125,9 @@ interface SeatMapQueryResult {
 export function useSeatMapQuery(concertId: string): UseQueryResult<SeatMapQueryResult, ApiError>;
 
 // useHoldSeatsMutation
-interface HoldSeatsRequest {
+interface MutationRequestBase { clientRequestId: string }
+
+interface HoldSeatsRequest extends MutationRequestBase {
   concertId: string;
   seatIds: string[];
 }
@@ -93,6 +137,7 @@ interface HoldSeatsResponse {
   totalAmount: number;
 }
 interface HoldSeatsError extends ApiError {
+  errorCode: HoldErrorCode;
   unavailableSeats?: string[]; // 선점 실패 좌석 ID (UI 피드백용)
 }
 export function useHoldSeatsMutation(): UseMutationResult<HoldSeatsResponse, HoldSeatsError, HoldSeatsRequest>;
@@ -101,7 +146,7 @@ export function useHoldSeatsMutation(): UseMutationResult<HoldSeatsResponse, Hol
 ### 2.2 예약 관련 훅
 ```typescript
 // useCreateReservationMutation
-interface CreateReservationRequest {
+interface CreateReservationRequest extends MutationRequestBase {
   heldSeatIds: string[];
   customerName: string;
   phoneNumber: string;
@@ -144,7 +189,8 @@ type SeatSelectionAction =
   | { type: 'SELECT_SEAT'; payload: { seatId: string } }
   | { type: 'DESELECT_SEAT'; payload: { seatId: string } }
   | { type: 'CLEAR_SELECTION' } // 선점 성공 후 선택 초기화
-  | { type: 'SET_SELECTION_ERROR'; payload: { message: string } };
+  | { type: 'SET_SELECTION_ERROR'; payload: { message: string } }
+  | { type: 'MARK_UNAVAILABLE'; payload: { seatIds: string[] } }; // 실패 좌석 시각화 트리거
 ```
 
 #### **Custom Hook & Context가 노출할 값 (`SeatSelectionContextValue`)**
@@ -174,6 +220,10 @@ interface SeatSelectionContextValue {
   selectedSeats: Seat[];
   /** 총 선택 금액 */
   totalAmount: number;
+  /** 최대 선택 가능 좌석 수 (예: 4) */
+  selectionLimit: number;
+  /** 남은 선택 가능 좌석 수 */
+  remainingSelectable: number;
   /** '예약하기' 버튼 활성화 조건 */
   canSubmitHold: boolean;
 
@@ -181,8 +231,15 @@ interface SeatSelectionContextValue {
   selectSeat: (seatId: string) => void;
   deselectSeat: (seatId: string) => void;
   holdSeats: () => Promise<void>;
+  clearSelection: () => void;
+  /** 실패 좌석을 일시적으로 강조 처리 */
+  markUnavailable: (seatIds: string[]) => void;
 }
 ```
+
+#### Provider Value 안정성 규칙
+- Context Value는 `useMemo`로 고정하고, 액션 함수는 `useCallback`으로 고정합니다.
+- 선택 수/총액 등 잦은 갱신 값은 별도 Context로 분리하여 리렌더 범위를 최소화합니다.
 
 ---
 
@@ -233,8 +290,62 @@ interface ReservationProcessContextValue {
   // 액션 함수 (Action Functions)
   updateFormField: (field: keyof ReservationForm, value: string) => void;
   submitReservation: () => Promise<void>;
+  expirePolicy: { warningThresholdSec: number };
 }
 ```
+---
+
+### 3.3 예약 조회 기능 (`ReservationLookup`)
+
+```typescript
+export interface CancellationPolicy {
+  hoursBeforePerformance: number; // e.g., 24
+  allowedStatuses: ReadonlyArray<'confirmed'>;
+}
+
+export interface ReservationLookupState {
+  lookupForm: { phoneNumber: string; password: string };
+  isLookingUp: boolean;
+  lookupError: string | null;
+  reservationDetail: ReservationDetail | null;
+  isCancelModalOpen: boolean;
+  isCancelling: boolean;
+  cancelError: string | null;
+}
+
+export type ReservationLookupAction =
+  | { type: 'UPDATE_LOOKUP_FORM'; payload: { field: keyof ReservationLookupState['lookupForm']; value: string } }
+  | { type: 'LOOKUP_START' | 'LOOKUP_SUCCESS' | 'LOOKUP_FAILURE'; payload?: unknown }
+  | { type: 'OPEN_CANCEL_MODAL' | 'CLOSE_CANCEL_MODAL' }
+  | { type: 'CANCEL_START' | 'CANCEL_SUCCESS' | 'CANCEL_FAILURE'; payload?: unknown }
+  | { type: 'RESET_STATE' };
+
+export interface ReservationLookupContextValue {
+  // 상태
+  lookupForm: ReservationLookupState['lookupForm'];
+  isLookingUp: boolean;
+  lookupError: string | null;
+  reservationDetail: ReservationDetail | null;
+  isCancelModalOpen: boolean;
+  isCancelling: boolean;
+  cancelError: string | null;
+
+  // 파생 상태
+  canCancel: boolean;
+
+  // 액션
+  updateLookupFormField: (field: keyof ReservationLookupState['lookupForm'], value: string) => void;
+  lookupReservation: () => Promise<void>;
+  showCancelModal: () => void;
+  hideCancelModal: () => void;
+  confirmCancellation: () => Promise<void>;
+  reset: () => void;
+
+  // 정책
+  cancellationPolicy: CancellationPolicy;
+}
+```
+
 ---
 
 ## 4. 페이지 전환 상태 전파
@@ -255,12 +366,66 @@ interface ReservationSession {
   setHeldInfo: (info: HoldSeatsResponse) => void;
   /** 세션 정보를 초기화하는 함수 */
   clearHeldInfo: () => void;
+  /** 읽는 순간 비우는 get-and-clear */
+  consumeHeldInfo: () => HoldSeatsResponse | null;
 }
 ```
 
 ---
 
-## 5. 결론
+## 5. 공통 구현 보강
+
+### 5.1 Provider Value 안정성
+- Value는 `useMemo`로, 액션은 `useCallback`으로 고정합니다.
+- 큰 값(예: 좌석 지도)과 잦은 값(예: 카운트/총액)을 분리 Context로 노출해 리렌더를 최소화합니다.
+
+### 5.2 비동기 액션 표준 인터페이스
+```typescript
+export interface WithAsyncDispatchOptions<TReq, TRes, TErr extends ApiError> {
+  start: () => void;                // START_* dispatch
+  effect: (req: TReq) => Promise<TRes>; // mutate/mutateAsync
+  onSuccess: (res: TRes) => void;   // *_SUCCESS dispatch + 후처리
+  onFailure: (err: TErr) => void;   // *_FAILURE dispatch + 후처리
+  finally?: () => void;             // 정합성 복구
+}
+
+export interface MutationRequestBase { clientRequestId: string }
+```
+
+### 5.3 좌석 폴링 인터페이스
+```typescript
+export interface SeatPollingState {
+  currentInterval: number;
+  isActive: boolean;
+  lastSyncedAt: string | null;
+  isWindowFocused: boolean;
+}
+
+export interface SeatPollingConfig {
+  defaultInterval: number;  // ms
+  urgentInterval: number;   // ms
+  urgentThreshold: number;  // sec
+}
+
+export interface UseSeatPollingOptions {
+  concertId: string;
+  enabled: boolean;
+  holdExpiresAt?: string | null;
+}
+```
+
+### 5.4 파생 셀렉터 인터페이스
+```typescript
+export interface SeatSelectionSelectors {
+  getSelectedSeats: (seatMap: Seat[], selectedIds: ReadonlyArray<string>) => Seat[];
+  getTotalAmount: (seats: ReadonlyArray<Seat>) => number;
+  canSubmitHold: (selectedCount: number, isHolding: boolean, limit: number) => boolean;
+}
+```
+
+---
+
+## 6. 결론
 
 ### 5.1 아키텍처 요약
 -   **서버 상태**: `React Query`가 API 통신 및 비동기 작업의 진행 상태까지 전담하여 단일 진실 공급원 역할을 수행합니다.
@@ -268,7 +433,7 @@ interface ReservationSession {
 -   **상태 전파**: 페이지 전환 시 필요한 일시적인 상태는 **Zustand 기반의 단기 세션 스토어**를 통해 명확하고 안전하게 전달됩니다.
 -   **단방향 데이터 흐름**: 사용자 액션 → Custom Hook 내 액션 함수 호출 → (`React Query Mutate` or `Reducer Dispatch`) → 상태 변경 → UI 업데이트 흐름을 유지하여 예측 가능성을 보장합니다.
 
-### 5.2 검증 체크리스트
+### 6.2 검증 체크리스트
 -   [ ] Provider는 상태/로직을 직접 구현하지 않고 Custom Hook을 통해 제공하는가?
 -   [ ] 비동기 로직 및 파생 상태 계산은 Custom Hook 내에 캡슐화되었는가?
 -   [ ] Reducer는 순수 동기적 상태 변경에만 집중하는가?
