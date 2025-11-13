@@ -7,10 +7,10 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import type { ConcertListItem } from "@/features/concert/lib/dto";
 
-import BlackpinkHero from "../../../../.img/Blackpink.png";
-import IUHero from "../../../../.img/IU.png";
-import BTSHero from "../../../../.img/BTS.png";
-import DefaultHero from "../../../../.img/seat.png";
+import BlackpinkHero from "../../../../public/images/Blackpink.png";
+import IUHero from "../../../../public/images/IU.png";
+import BTSHero from "../../../../public/images/BTS.png";
+import DefaultHero from "../../../../public/images/seat.png";
 
 type ConcertCardProps = {
   concert: ConcertListItem;
