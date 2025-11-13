@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/remote/api-client';
 import type { CreateReservationResponse } from '@/features/reservation/backend/schema';
+import { useReservationSession } from '@/stores/useReservationSession';
 
 interface CreateReservationPayload {
   seatIds: string[];
@@ -20,6 +21,9 @@ interface CreateReservationPayload {
 export const useCreateReservationMutation = () => {
   const router = useRouter();
   const { toast } = useToast();
+  const setRecentReservationId = useReservationSession(
+    (state) => state.setRecentReservationId,
+  );
 
   return useMutation<CreateReservationResponse, unknown, CreateReservationPayload>({
     mutationFn: async (data: CreateReservationPayload) => {
@@ -30,6 +34,7 @@ export const useCreateReservationMutation = () => {
       return response.data;
     },
     onSuccess: (data) => {
+      setRecentReservationId(data.reservationId);
       toast({
         title: '성공',
         description: '예약이 완료되었습니다.',

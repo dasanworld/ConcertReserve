@@ -1,27 +1,38 @@
-"use client";
+'use client';
 
-import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, Home } from "lucide-react";
-import { useReservationDetail } from "@/features/reservation/hooks/use-reservation-detail-query";
-import { SuccessMessage } from "@/features/reservation/components/success-message";
-import { ReservationNumberDisplay } from "@/features/reservation/components/reservation-number-display";
-import { ReservationDetails } from "@/features/reservation/components/reservation-details";
-import { ActionButtons } from "@/features/reservation/components/action-buttons";
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useMemo } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Home } from 'lucide-react';
+import { useReservationDetail } from '@/features/reservation/hooks/use-reservation-detail-query';
+import { SuccessMessage } from '@/features/reservation/components/success-message';
+import { ReservationNumberDisplay } from '@/features/reservation/components/reservation-number-display';
+import { ReservationDetails } from '@/features/reservation/components/reservation-details';
+import { ActionButtons } from '@/features/reservation/components/action-buttons';
+import { useReservationSession } from '@/stores/useReservationSession';
 
 export default function ReservationCompletePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const reservationId = searchParams.get("id");
+  const consumeRecentReservationId = useReservationSession(
+    (state) => state.consumeRecentReservationId,
+  );
+
+  const reservationId = useMemo(() => {
+    const queryId = searchParams.get('id');
+    if (queryId) {
+      return queryId;
+    }
+    return consumeRecentReservationId();
+  }, [consumeRecentReservationId, searchParams]);
 
   const { reservation, isLoading, error } = useReservationDetail(reservationId);
 
   useEffect(() => {
     if (!reservationId) {
-      router.push("/");
+      router.push('/');
     }
   }, [reservationId, router]);
 
@@ -59,13 +70,13 @@ export default function ReservationCompletePage() {
                 예약 정보를 찾을 수 없습니다
               </h2>
               <p className="mt-2 text-gray-600">
-                {error || "예약 정보를 불러오는 중 오류가 발생했습니다."}
+                {error || '예약 정보를 불러오는 중 오류가 발생했습니다.'}
               </p>
             </div>
             <Button
               variant="default"
               size="lg"
-              onClick={() => router.push("/")}
+              onClick={() => router.push('/')}
               className="mt-4"
             >
               <Home className="mr-2 h-4 w-4" />

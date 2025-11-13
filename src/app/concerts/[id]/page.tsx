@@ -8,9 +8,13 @@ import { ConcertHeroSection } from '@/features/concert/components/concert-hero-s
 import { ConcertInfo } from '@/features/concert/components/concert-info';
 import { SeatTierList } from '@/features/concert/components/seat-tier-list';
 import { ConcertAvailability } from '@/features/concert/components/concert-availability';
-import { BookingButton } from '@/features/concert/components/booking-button';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SeatSelectionProvider } from '@/features/seat-selection/state/seat-selection-context';
+import { useSeatSelection } from '@/features/seat-selection/hooks/useSeatSelection';
+import { SeatMapViewer } from '@/features/seat-selection/components/seat-map-viewer';
+import { SelectedSeatsPanel } from '@/features/seat-selection/components/selected-seats-panel';
+import { SeatHoldButton } from '@/features/seat-selection/components/seat-hold-button';
 
 export default function ConcertDetailPage() {
   const params = useParams();
@@ -104,9 +108,92 @@ export default function ConcertDetailPage() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <SeatTierList seatTiers={data.seatTiers} />
         </div>
-      </div>
 
-      <BookingButton concertId={data.id} availableSeats={data.availableSeats} />
+        <div id="seat-selection" className="bg-white rounded-lg shadow-sm p-6 space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold">좌석 선택</h2>
+            <p className="text-gray-600">
+              실시간 좌석 배치도를 확인하고 원하는 좌석을 선택한 뒤 예약을 진행하세요.
+            </p>
+          </div>
+          <SeatSelectionProvider concertId={data.id}>
+            <InlineSeatSelectionContent />
+          </SeatSelectionProvider>
+        </div>
+      </div>
     </div>
   );
 }
+
+const InlineSeatSelectionContent = () => {
+  const {
+    seatTiers,
+    enhancedSeatMap,
+    selectedSeatIdSet,
+    selectedSeats,
+    totalAmount,
+    selectionError,
+    seatMapError,
+    isSeatMapLoading,
+    isHolding,
+    canSubmitHold,
+    toggleSeat,
+    clearSelection,
+    holdSeats,
+  } = useSeatSelection();
+
+  if (isSeatMapLoading) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+        <div className="space-y-6">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (seatMapError) {
+    return (
+      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        좌석 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="lg:col-span-2">
+        <SeatMapViewer
+          seats={enhancedSeatMap}
+          seatTiers={seatTiers}
+          selectedSeatIds={selectedSeatIdSet}
+          onSeatClick={toggleSeat}
+        />
+      </div>
+
+      <div className="space-y-6">
+        <SelectedSeatsPanel
+          selectedSeats={selectedSeats}
+          totalPrice={totalAmount}
+          onClearSelection={clearSelection}
+        />
+
+        <SeatHoldButton
+          selectedCount={selectedSeats.length}
+          isLoading={isHolding}
+          onHoldSeats={holdSeats}
+          disabled={!canSubmitHold}
+        />
+
+        {selectionError && (
+          <div className="text-sm text-red-600 text-center">{selectionError}</div>
+        )}
+      </div>
+    </div>
+  );
+};

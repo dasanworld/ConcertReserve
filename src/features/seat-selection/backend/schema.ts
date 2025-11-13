@@ -9,7 +9,7 @@ export const SeatTierRowSchema = z.object({
   id: z.string().uuid(),
   concert_id: z.string().uuid(),
   label: z.string(),
-  price: z.string(), // numeric comes from DB as string
+  price: z.union([z.string(), z.number()]), // numeric comes from DB as string or number
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable(),

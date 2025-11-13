@@ -23,43 +23,67 @@ export const SeatTierList = ({ seatTiers }: SeatTierListProps) => {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">좌석 등급</h2>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {seatTiers.map((tier) => (
-          <Card key={tier.id}>
-            <CardHeader>
-              <CardTitle className="text-lg">{tier.label}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">가격</span>
-                <span className="font-semibold text-lg">
-                  {tier.price.toLocaleString()}원
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">잔여석</span>
-                <span className="font-medium">
-                  {tier.availableSeats} / {tier.totalSeats}석
-                </span>
-              </div>
-              <div className="text-sm text-gray-600">
-                구역 {formatRange(tier.layoutSummary.sections)}
-              </div>
-              <div className="text-sm text-gray-600">
-                행 {formatRange(tier.layoutSummary.rows)} · 행당{' '}
-                {tier.layoutSummary.seatsPerRow > 0
-                  ? `${tier.layoutSummary.seatsPerRow}석`
-                  : '정보 없음'}
-              </div>
-              {tier.temporarilyHeldSeats > 0 && (
-                <div className="text-sm text-amber-600">
-                  임시 선점 중: {tier.temporarilyHeldSeats}석
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">등급별 요약</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b">
+                <th className="py-2 pr-4">등급</th>
+                <th className="py-2 pr-4">가격</th>
+                <th className="py-2 pr-4">잔여/전체</th>
+                <th className="py-2 pr-4">임시 선점</th>
+                <th className="py-2 pr-4">예약 완료</th>
+                <th className="py-2 pr-4">구역/행</th>
+              </tr>
+            </thead>
+            <tbody>
+              {seatTiers.map((tier) => {
+                const layout = tier.layoutSummary ?? {
+                  sections: [],
+                  rows: [],
+                  seatsPerRow: 0,
+                };
+
+                return (
+                  <tr key={tier.id} className="border-b last:border-b-0">
+                    <td className="py-3 pr-4 font-semibold text-gray-800">
+                      {tier.label}
+                    </td>
+                    <td className="py-3 pr-4 font-medium">
+                      {tier.price.toLocaleString()}원
+                  </td>
+                  <td className="py-3 pr-4">
+                    <span className="font-medium text-green-600">
+                      {tier.availableSeats}
+                    </span>
+                    <span className="text-gray-500">
+                      {' '}
+                      / {tier.totalSeats}석
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4 text-amber-600">
+                    {tier.temporarilyHeldSeats}석
+                  </td>
+                  <td className="py-3 pr-4 text-red-600">
+                    {tier.reservedSeats}석
+                  </td>
+                  <td className="py-3 pr-4 text-gray-600">
+                    구역 {formatRange(layout.sections)} <br />
+                    행 {formatRange(layout.rows)} · 행당{' '}
+                    {layout.seatsPerRow > 0
+                      ? `${layout.seatsPerRow}석`
+                      : '정보 없음'}
+                  </td>
+                </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   );
 };

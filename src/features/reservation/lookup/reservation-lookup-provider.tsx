@@ -15,7 +15,7 @@ import {
   ReservationDetailResponseSchema,
   ReservationLookupResponseSchema,
   type ReservationDetailResponse,
-} from '@/features/reservation/backend/schema';
+} from '@/features/reservation/lib/dto';
 
 export interface CancellationPolicy {
   hoursBeforePerformance: number;
@@ -282,12 +282,12 @@ export const ReservationLookupProvider = ({ children }: { children: ReactNode })
       reset,
       showCancelModal,
       state.isCancelModalOpen,
-       state.isCancelling,
-       state.cancelError,
+      state.isCancelling,
+      state.cancelError,
       state.isLookingUp,
       state.lookupError,
       state.lookupForm,
-      state.reservationDetail?.status,
+      state.reservationDetail,
       updateLookupFormField,
     ],
   );

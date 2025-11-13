@@ -4,6 +4,7 @@ import { LookupFormHeader } from '@/features/reservation/components/lookup-form-
 import { LookupForm } from '@/features/reservation/components/lookup-form';
 import { SubmitLookupButton } from '@/features/reservation/components/submit-lookup-button';
 import { ReservationLookupProvider } from '@/features/reservation/lookup/reservation-lookup-provider';
+import { LookupResultPanel } from '@/features/reservation/components/lookup-result-panel';
 
 /**
  * 예약 조회 페이지
@@ -20,6 +21,8 @@ export default function ReservationLookupPage() {
             <LookupForm />
             <SubmitLookupButton />
           </div>
+
+          <LookupResultPanel />
 
           <div className="space-y-2 rounded-lg bg-blue-50 p-4 text-sm text-gray-600">
             <p className="font-medium text-blue-900">💡 예약 조회 안내</p>

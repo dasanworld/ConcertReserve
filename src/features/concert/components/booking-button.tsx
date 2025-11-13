@@ -16,7 +16,11 @@ export const BookingButton = ({
   const isSoldOut = availableSeats === 0;
 
   const handleBooking = () => {
-    router.push(`/concerts/${concertId}/seats`);
+    // 좌석 선택 섹션으로 스크롤
+    const seatSelectionElement = document.getElementById('seat-selection');
+    if (seatSelectionElement) {
+      seatSelectionElement.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   return (

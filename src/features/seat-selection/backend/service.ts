@@ -211,11 +211,7 @@ export const holdSeats = async (
     return failure(400, seatSelectionErrorCodes.exceededMaxSeats, '최대 10석까지 선택할 수 있습니다.');
   }
 
-  // 2. 트랜잭션으로 비관적 잠금과 선점 처리
-  // Supabase는 트랜잭션을 직접 지원하지 않으므로 RPC 함수로 처리하거나
-  // SELECT FOR UPDATE를 지원하지 않으므로 낙관적 잠금 방식으로 구현
-  // 여기서는 간단한 방식으로 먼저 조회 후 업데이트 시도
-
+  // 2. 낙관적 잠금 방식으로 좌석 선점 처리
   // 2-1. 현재 좌석 상태 확인
   const { data: currentSeats, error: fetchError } = await client
     .from(SEATS_TABLE)
@@ -234,58 +230,65 @@ export const holdSeats = async (
 
   // 2-2. 모든 좌석이 available 상태인지 확인
   const now = new Date();
+  const unavailableSeats: string[] = [];
+
   for (const seat of currentSeats) {
     // 이미 예약된 좌석
     if (seat.status === 'reserved') {
-      return failure(409, seatSelectionErrorCodes.seatAlreadyReserved, '이미 예약된 좌석이 포함되어 있습니다.');
+      unavailableSeats.push(seat.id);
+      continue;
     }
 
     // 다른 사용자가 선점한 좌석 (만료되지 않은 경우)
     if (seat.status === 'temporarily_held' && seat.hold_expires_at) {
       const expiresAt = new Date(seat.hold_expires_at);
       if (expiresAt > now) {
-        return failure(409, seatSelectionErrorCodes.seatAlreadyHeld, '다른 사용자가 선점한 좌석이 포함되어 있습니다.');
+        unavailableSeats.push(seat.id);
+        continue;
       }
     }
+  }
+
+  if (unavailableSeats.length > 0) {
+    return failure(
+      409,
+      seatSelectionErrorCodes.seatsNotAvailable,
+      '선택한 좌석 중 일부를 선점할 수 없습니다.',
+      { unavailableSeats }
+    );
   }
 
   // 2-3. 선점 처리 (5분 유효)
   const holdExpiresAt = new Date(Date.now() + HOLD_DURATION_MS).toISOString();
 
-  const { error: updateError } = await client
-    .from(SEATS_TABLE)
-    .update({
-      status: 'temporarily_held',
-      hold_expires_at: holdExpiresAt,
-    })
-    .in('id', seatIds)
-    .eq('status', 'available'); // 낙관적 잠금: available 상태일 때만 업데이트
+  // 업데이트 시도 - 각 좌석을 개별 업데이트하여 안정성 확보
+  let successCount = 0;
+  for (const seatId of seatIds) {
+    const { error: seatUpdateError } = await client
+      .from(SEATS_TABLE)
+      .update({
+        status: 'temporarily_held',
+        hold_expires_at: holdExpiresAt,
+      })
+      .eq('id', seatId)
+      .eq('concert_id', concertId)
+      .eq('status', 'available');
 
-  if (updateError) {
-    return failure(500, seatSelectionErrorCodes.holdFailed, updateError.message);
+    if (!seatUpdateError) {
+      successCount += 1;
+    }
   }
 
-  // 2-4. 업데이트 성공 여부 확인
-  const { data: updatedSeats, error: verifyError } = await client
-    .from(SEATS_TABLE)
-    .select('id, status, hold_expires_at')
-    .in('id', seatIds);
-
-  if (verifyError) {
-    return failure(500, seatSelectionErrorCodes.fetchFailed, verifyError.message);
+  // 일부 좌석만 업데이트되었다면 실패
+  if (successCount !== seatIds.length) {
+    return failure(
+      409,
+      seatSelectionErrorCodes.seatsNotAvailable,
+      '선택한 좌석 중 일부를 선점할 수 없습니다.',
+    );
   }
 
-  // 모든 좌석이 successfully held 상태인지 확인
-  const allHeld = updatedSeats?.every(
-    (s) => s.status === 'temporarily_held' && s.hold_expires_at === holdExpiresAt
-  );
-
-  if (!allHeld) {
-    return failure(409, seatSelectionErrorCodes.seatsNotAvailable, '선택한 좌석 중 일부를 선점할 수 없습니다.');
-  }
-
-  // 3. 응답 데이터 구성
-  // 2-5. 선점된 좌석 상세 정보 조회
+  // 3. 응답 데이터 구성 - 선점된 좌석 상세 정보 조회
   const seatTierIds = Array.from(
     new Set((currentSeats ?? []).map((seat) => seat.seat_tier_id)),
   );
@@ -303,6 +306,7 @@ export const holdSeats = async (
     (tierRows ?? []).map((tier) => [tier.id, { label: tier.label, price: Number(tier.price) }]),
   );
 
+  // currentSeats는 이미 검증된 좌석들이므로, 이를 기반으로 응답 구성
   const heldSeats = (currentSeats ?? []).map((seat) => {
     const tier = tierMap.get(seat.seat_tier_id);
     return {

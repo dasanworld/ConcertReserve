@@ -5,6 +5,7 @@
 .claude/
 /docs/database.codex.md.org
 .gitignore copy
+.img/
 
 
 # ============================================
