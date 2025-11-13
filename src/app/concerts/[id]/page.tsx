@@ -10,8 +10,7 @@ import { SeatTierList } from '@/features/concert/components/seat-tier-list';
 import { ConcertAvailability } from '@/features/concert/components/concert-availability';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SeatSelectionProvider } from '@/features/seat-selection/state/seat-selection-context';
-import { useSeatSelection } from '@/features/seat-selection/hooks/useSeatSelection';
+import { SeatSelectionProvider, useSeatSelectionContext } from '@/features/seat-selection/state/seat-selection-context';
 import { SeatMapViewer } from '@/features/seat-selection/components/seat-map-viewer';
 import { SelectedSeatsPanel } from '@/features/seat-selection/components/selected-seats-panel';
 import { SeatHoldButton } from '@/features/seat-selection/components/seat-hold-button';
@@ -140,7 +139,7 @@ const InlineSeatSelectionContent = () => {
     toggleSeat,
     clearSelection,
     holdSeats,
-  } = useSeatSelection();
+  } = useSeatSelectionContext();
 
   if (isSeatMapLoading) {
     return (
