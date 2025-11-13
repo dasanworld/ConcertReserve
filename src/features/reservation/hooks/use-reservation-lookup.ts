@@ -296,7 +296,7 @@ export function useReservationLookup(): ReservationLookupContextValue {
       isResultDialogOpen: state.isResultDialogOpen,
       resultDialogSuccess: state.resultDialogSuccess,
       resultDialogMessage: state.resultDialogMessage,
-      canCancel: state.reservationDetail?.status === 'confirmed' ?? false,
+      canCancel: state.reservationDetail?.status === 'confirmed',
       cancellationPolicy: DEFAULT_CANCELLATION_POLICY,
       updateLookupFormField,
       lookupReservation,

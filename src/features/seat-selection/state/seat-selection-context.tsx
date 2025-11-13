@@ -6,13 +6,13 @@ import type { SeatInfo, SeatTierInfo } from '@/features/seat-selection/lib/dto';
 import type { EnhancedSeat } from '@/features/seat-selection/types/enhanced-seat';
 
 // ========== State & Action Types (보내내기 위해 export) ==========
-interface SeatSelectionState {
+export interface SeatSelectionState {
   selectedSeatIds: string[];
   selectionError: string | null;
   unavailableSeatIds: string[];
 }
 
-type SeatSelectionAction =
+export type SeatSelectionAction =
   | { type: 'SELECT_SEAT'; payload: { seatId: string } }
   | { type: 'DESELECT_SEAT'; payload: { seatId: string } }
   | { type: 'CLEAR_SELECTION' }

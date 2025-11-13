@@ -63,8 +63,6 @@ const ReservationProcessContent = () => {
     );
   }
 
-  const handleSubmit = form.handleSubmit((data) => submitReservation(data));
-
   return (
     <main className="min-h-screen bg-gray-50 py-12">
       <div className="mx-auto max-w-2xl px-4 space-y-8">
@@ -86,7 +84,7 @@ const ReservationProcessContent = () => {
           <SubmitReservationButton
             form={form}
             isPending={isSubmitting}
-            onSubmit={handleSubmit}
+            onSubmit={submitReservation}
             disabled={isHoldExpired}
           />
 

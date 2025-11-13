@@ -10,7 +10,8 @@ import type { ConcertListItem } from "@/features/concert/lib/dto";
 import BlackpinkHero from "../../../../public/images/Blackpink.png";
 import IUHero from "../../../../public/images/IU.png";
 import BTSHero from "../../../../public/images/BTS.png";
-import DefaultHero from "../../../../public/images/seat.png";
+// Default hero image - fallback to IU image if no match
+const DefaultHero = IUHero;
 
 type ConcertCardProps = {
   concert: ConcertListItem;
