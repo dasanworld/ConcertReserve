@@ -1,9 +1,11 @@
 # ============================================
 # 사용자 추가
 # ============================================
-.quen/
+.qwen/
 .claude/
 /docs/database.codex.md.org
+.gitignore copy
+
 
 # ============================================
 # Ruler Generated Files
@@ -153,3 +155,7 @@ USECASE_CHECKER_SUMMARY.md
 *.pid
 *.seed
 *.tgz
+
+
+# START Ruler Generated Files
+# END Ruler Generated Files
