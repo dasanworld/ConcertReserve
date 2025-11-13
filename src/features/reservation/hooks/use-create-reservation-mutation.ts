@@ -31,12 +31,9 @@ export const useCreateReservationMutation = () => {
         '/api/reservations',
         data,
       );
-      console.log('✅ Create reservation response:', response.data);
       return response.data;
     },
     onSuccess: (data) => {
-      console.log('🎉 Mutation onSuccess:', data);
-      console.log('📝 Reservation ID:', data.reservationId);
       setRecentReservationId(data.reservationId);
       toast({
         title: '성공',
@@ -44,7 +41,6 @@ export const useCreateReservationMutation = () => {
         variant: 'default',
       });
       const redirectUrl = `/reservations/complete?id=${data.reservationId}`;
-      console.log('🔗 Redirecting to:', redirectUrl);
       router.push(redirectUrl);
     },
     onError: (error: any) => {

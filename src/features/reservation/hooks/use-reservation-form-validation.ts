@@ -30,7 +30,7 @@ const reservationFormSchema = z.object({
   phoneNumber: z
     .string()
     .transform(normalizePhoneNumber)
-    .regex(PHONE_NUMBER_REGEX, '휴대폰 번호 형식이 올바르지 않습니다. (010-XXXX-XXXX 또는 01000000000)'),
+    .pipe(z.string().regex(PHONE_NUMBER_REGEX, '휴대폰 번호 형식이 올바르지 않습니다. (010-XXXX-XXXX 또는 01000000000)')),
   password: z
     .string()
     .min(PASSWORD_MIN_LENGTH, `비밀번호는 최소 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`)
