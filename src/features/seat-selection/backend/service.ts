@@ -1,0 +1,271 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  failure,
+  success,
+  type HandlerResult,
+} from '@/backend/http/response';
+import {
+  SeatsResponseSchema,
+  SeatRowSchema,
+  SeatTierRowSchema,
+  SeatHoldResponseSchema,
+  type SeatsResponse,
+  type SeatHoldResponse,
+  type SeatRow,
+  type SeatTierRow,
+} from '@/features/seat-selection/backend/schema';
+import {
+  seatSelectionErrorCodes,
+  type SeatSelectionServiceError,
+} from '@/features/seat-selection/backend/error';
+
+const CONCERTS_TABLE = 'concerts';
+const SEAT_TIERS_TABLE = 'concert_seat_tiers';
+const SEATS_TABLE = 'seats';
+
+// 5분 선점 시간 (밀리초)
+const HOLD_DURATION_MS = 5 * 60 * 1000;
+
+export const getSeatsByConcertId = async (
+  client: SupabaseClient,
+  concertId: string,
+): Promise<
+  HandlerResult<SeatsResponse, SeatSelectionServiceError, unknown>
+> => {
+  // 1. 콘서트 존재 여부 확인
+  const { data: concertData, error: concertError } = await client
+    .from(CONCERTS_TABLE)
+    .select('id, title, status, deleted_at')
+    .eq('id', concertId)
+    .eq('status', 'published')
+    .is('deleted_at', null)
+    .single();
+
+  if (concertError) {
+    if (concertError.code === 'PGRST116') {
+      return failure(404, seatSelectionErrorCodes.concertNotFound, '콘서트를 찾을 수 없습니다.');
+    }
+    return failure(500, seatSelectionErrorCodes.fetchFailed, concertError.message);
+  }
+
+  if (!concertData) {
+    return failure(404, seatSelectionErrorCodes.concertNotFound, '콘서트를 찾을 수 없습니다.');
+  }
+
+  // 2. 좌석 등급 정보 조회
+  const { data: tierData, error: tierError } = await client
+    .from(SEAT_TIERS_TABLE)
+    .select('*')
+    .eq('concert_id', concertId)
+    .is('deleted_at', null)
+    .order('price', { ascending: true });
+
+  if (tierError) {
+    return failure(500, seatSelectionErrorCodes.fetchFailed, tierError.message);
+  }
+
+  const validatedTiers: SeatTierRow[] = [];
+  for (const row of tierData || []) {
+    const tierParse = SeatTierRowSchema.safeParse(row);
+    if (!tierParse.success) {
+      return failure(
+        500,
+        seatSelectionErrorCodes.validationError,
+        'Seat tier row failed validation.',
+        tierParse.error.format(),
+      );
+    }
+    validatedTiers.push(tierParse.data);
+  }
+
+  // 3. 모든 좌석 정보 조회
+  const { data: seatData, error: seatError } = await client
+    .from(SEATS_TABLE)
+    .select('*')
+    .eq('concert_id', concertId)
+    .is('deleted_at', null)
+    .order('label', { ascending: true });
+
+  if (seatError) {
+    return failure(500, seatSelectionErrorCodes.fetchFailed, seatError.message);
+  }
+
+  const validatedSeats: SeatRow[] = [];
+  for (const row of seatData || []) {
+    const seatParse = SeatRowSchema.safeParse(row);
+    if (!seatParse.success) {
+      return failure(
+        500,
+        seatSelectionErrorCodes.validationError,
+        'Seat row failed validation.',
+        seatParse.error.format(),
+      );
+    }
+    validatedSeats.push(seatParse.data);
+  }
+
+  // 4. 등급별 통계 계산
+  const tierMap = new Map(validatedTiers.map((t) => [t.id, t]));
+  const tiers = validatedTiers.map((tier) => {
+    const tierSeats = validatedSeats.filter((s) => s.seat_tier_id === tier.id);
+    const totalCount = tierSeats.length;
+    const availableCount = tierSeats.filter((s) => s.status === 'available').length;
+    const heldCount = tierSeats.filter((s) => s.status === 'temporarily_held').length;
+    const reservedCount = tierSeats.filter((s) => s.status === 'reserved').length;
+
+    return {
+      id: tier.id,
+      label: tier.label,
+      price: Number(tier.price),
+      availableCount,
+      heldCount,
+      reservedCount,
+      totalCount,
+    };
+  });
+
+  // 5. 좌석 정보 매핑
+  const seats = validatedSeats.map((seat) => {
+    const tier = tierMap.get(seat.seat_tier_id);
+    return {
+      id: seat.id,
+      seatTierId: seat.seat_tier_id,
+      seatTierLabel: tier?.label || '',
+      label: seat.label,
+      status: seat.status,
+      price: tier ? Number(tier.price) : 0,
+      holdExpiresAt: seat.hold_expires_at,
+    };
+  });
+
+  // 6. 응답 데이터 구성
+  const response = {
+    concertId: concertData.id,
+    concertTitle: concertData.title,
+    tiers,
+    seats,
+  };
+
+  // 7. 스키마 검증
+  const parsed = SeatsResponseSchema.safeParse(response);
+  if (!parsed.success) {
+    return failure(
+      500,
+      seatSelectionErrorCodes.validationError,
+      'Seats response payload failed validation.',
+      parsed.error.format(),
+    );
+  }
+
+  return success(parsed.data);
+};
+
+export const holdSeats = async (
+  client: SupabaseClient,
+  concertId: string,
+  seatIds: string[],
+): Promise<
+  HandlerResult<SeatHoldResponse, SeatSelectionServiceError, unknown>
+> => {
+  // 1. 좌석 수 제한 검증 (최대 10석)
+  if (seatIds.length === 0) {
+    return failure(400, seatSelectionErrorCodes.invalidSeatIds, '선택된 좌석이 없습니다.');
+  }
+
+  if (seatIds.length > 10) {
+    return failure(400, seatSelectionErrorCodes.exceededMaxSeats, '최대 10석까지 선택할 수 있습니다.');
+  }
+
+  // 2. 트랜잭션으로 비관적 잠금과 선점 처리
+  // Supabase는 트랜잭션을 직접 지원하지 않으므로 RPC 함수로 처리하거나
+  // SELECT FOR UPDATE를 지원하지 않으므로 낙관적 잠금 방식으로 구현
+  // 여기서는 간단한 방식으로 먼저 조회 후 업데이트 시도
+
+  // 2-1. 현재 좌석 상태 확인
+  const { data: currentSeats, error: fetchError } = await client
+    .from(SEATS_TABLE)
+    .select('id, status, hold_expires_at')
+    .eq('concert_id', concertId)
+    .in('id', seatIds)
+    .is('deleted_at', null);
+
+  if (fetchError) {
+    return failure(500, seatSelectionErrorCodes.fetchFailed, fetchError.message);
+  }
+
+  if (!currentSeats || currentSeats.length !== seatIds.length) {
+    return failure(400, seatSelectionErrorCodes.invalidSeatIds, '유효하지 않은 좌석이 포함되어 있습니다.');
+  }
+
+  // 2-2. 모든 좌석이 available 상태인지 확인
+  const now = new Date();
+  for (const seat of currentSeats) {
+    // 이미 예약된 좌석
+    if (seat.status === 'reserved') {
+      return failure(409, seatSelectionErrorCodes.seatAlreadyReserved, '이미 예약된 좌석이 포함되어 있습니다.');
+    }
+
+    // 다른 사용자가 선점한 좌석 (만료되지 않은 경우)
+    if (seat.status === 'temporarily_held' && seat.hold_expires_at) {
+      const expiresAt = new Date(seat.hold_expires_at);
+      if (expiresAt > now) {
+        return failure(409, seatSelectionErrorCodes.seatAlreadyHeld, '다른 사용자가 선점한 좌석이 포함되어 있습니다.');
+      }
+    }
+  }
+
+  // 2-3. 선점 처리 (5분 유효)
+  const holdExpiresAt = new Date(Date.now() + HOLD_DURATION_MS).toISOString();
+
+  const { error: updateError } = await client
+    .from(SEATS_TABLE)
+    .update({
+      status: 'temporarily_held',
+      hold_expires_at: holdExpiresAt,
+    })
+    .in('id', seatIds)
+    .eq('status', 'available'); // 낙관적 잠금: available 상태일 때만 업데이트
+
+  if (updateError) {
+    return failure(500, seatSelectionErrorCodes.holdFailed, updateError.message);
+  }
+
+  // 2-4. 업데이트 성공 여부 확인
+  const { data: updatedSeats, error: verifyError } = await client
+    .from(SEATS_TABLE)
+    .select('id, status, hold_expires_at')
+    .in('id', seatIds);
+
+  if (verifyError) {
+    return failure(500, seatSelectionErrorCodes.fetchFailed, verifyError.message);
+  }
+
+  // 모든 좌석이 successfully held 상태인지 확인
+  const allHeld = updatedSeats?.every(
+    (s) => s.status === 'temporarily_held' && s.hold_expires_at === holdExpiresAt
+  );
+
+  if (!allHeld) {
+    return failure(409, seatSelectionErrorCodes.seatsNotAvailable, '선택한 좌석 중 일부를 선점할 수 없습니다.');
+  }
+
+  // 3. 응답 데이터 구성
+  const response = {
+    success: true,
+    holdExpiresAt,
+    seatIds,
+  };
+
+  // 4. 스키마 검증
+  const parsed = SeatHoldResponseSchema.safeParse(response);
+  if (!parsed.success) {
+    return failure(
+      500,
+      seatSelectionErrorCodes.validationError,
+      'Seat hold response payload failed validation.',
+      parsed.error.format(),
+    );
+  }
+
+  return success(parsed.data);
+};

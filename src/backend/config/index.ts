@@ -13,8 +13,10 @@ export const getAppConfig = (): AppConfig => {
     return cachedConfig;
   }
 
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+
   const parsed = envSchema.safeParse({
-    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_URL: supabaseUrl,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   });
 
